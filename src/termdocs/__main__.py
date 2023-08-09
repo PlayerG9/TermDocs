@@ -21,7 +21,7 @@ from handlers.register import HANDLERS
 
 logging.basicConfig(
     level=logging.DEBUG,
-    handlers=[InternLoggingHandler(), TextualLoggingHandler(), logging.FileHandler("run.log", mode="w")]
+    handlers=[logging.FileHandler("run.log", mode="w"), TextualLoggingHandler(), InternLoggingHandler()]
 )
 
 
