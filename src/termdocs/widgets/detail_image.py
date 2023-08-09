@@ -46,7 +46,9 @@ class DetailImage(ImageBase):
     def render(self) -> RenderableType:
         if self._image is None:
             return self._message.center(self.size.width)
-        logging.debug(f"Rendering Image: {self._src} as {self.size}")
+        if self.cached:
+            return self.cached
+
         img = self._image.convert('LA')
         img.thumbnail((self.size.width * 2, self.size.height * 4))
         tw, th = math.ceil(img.width / 2), math.ceil(img.height / 4)

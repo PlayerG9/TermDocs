@@ -46,6 +46,8 @@ class ColorImage(ImageBase):
     def render(self) -> textual.app.RenderableType:
         if self.image is None:
             return self._message.center(self.size.width)
+        if self.cached:
+            return self.cached
 
         img = self.image.convert('RGBA')
         img.thumbnail((self.size.width, self.size.height * 2))
