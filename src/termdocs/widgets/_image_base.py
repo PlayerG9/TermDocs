@@ -5,9 +5,10 @@ r"""
 """
 import io
 import re
+import time
+import base64
 import logging
 import mimetypes
-import time
 import typing as t
 import os.path as p
 import urllib.parse
@@ -17,6 +18,16 @@ from textual.reactive import reactive, var
 import textual.timer
 import cairosvg
 from PIL import Image
+
+
+WEB_URL_RE = re.compile(r"^https?://")
+DATE_URL_RE = re.compile(r"^data:(?P<mimetype>[\w\-.]+/[\w\-.]+)(?:;(?P<encoding>\w+))?,(?P<data>.*)$")
+DECODE_MAP = {
+    'base16': base64.b16decode,
+    'base32': base64.b32decode,
+    'base64': base64.b64decode,
+    'base85': base64.b85decode,
+}
 
 
 class ImageBase(textual.widget.Widget):
@@ -91,37 +102,54 @@ class ImageBase(textual.widget.Widget):
 
     async def load(self, src: str):
         self._src = src
-        if src.startswith("http://") or src.startswith("https://"):
-            await self.load_web(url=src)
-        elif p.isfile(src):
-            await self.load_file(path=p.abspath(src))
-        else:
-            raise FileNotFoundError(src)
+        self._message = "Loading..."
+        try:
+            if WEB_URL_RE.match(src):
+                await self.load_web(url=src)
+            elif DATE_URL_RE.match(src):
+                await self.load_data_url(url=src)
+            elif p.isfile(src):
+                await self.load_file(path=p.abspath(src))
+            else:
+                raise FileNotFoundError(src)
+        except Exception as error:
+            logging.error(f"Failed to load resource: {src}", exc_info=error)
+            self._message = f"{type(error).__name__}: {error}"
 
     async def load_web(self, url: str):
-        worker = self.run_worker(self._load_web(url), exclusive=True)
-        await worker.wait()
-        if worker.error:
-            self._message = f"{type(worker.error).__name__}: {worker.error}"
+        self._load_web(url)
 
+    @textual.work(exclusive=True)
     async def _load_web(self, url: str):
-        async with httpx.AsyncClient() as client:
-            response = await client.get(url)
-            if not response.is_success:
-                self._message = f"{response.status_code}: {response.reason_phrase}"
-            else:
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.get(url)
+                response.raise_for_status()
                 buffer = io.BytesIO(await response.aread())
                 buffer.name = p.basename(urllib.parse.urlparse(url).path)
                 self._from_buffer(buffer)
+        except Exception as error:
+            logging.error(f"Failed to load resource: {url}", exc_info=error)
+            self._message = f"{type(error).__name__}: {error}"
+
+    async def load_data_url(self, url: str):
+        match = DATE_URL_RE.match(url)
+        groups = match.groupdict()
+        mimetype = groups.get("mimetype")
+        encoding = groups.get("encoding")
+        # https://stackoverflow.com/questions/2941995/python-ignore-incorrect-padding-error-when-base64-decoding
+        data = groups.get("data") + '=='
+        if encoding not in DECODE_MAP:
+            raise LookupError(f"Unsupported encoding: {encoding}")
+        decoder = DECODE_MAP[encoding]
+        buffer = io.BytesIO(decoder(data))
+        self._from_buffer(buffer, mime=mimetype)
 
     async def load_file(self, path: str):
-        try:
-            with open(path, 'rb') as file:
-                buffer = io.BytesIO(file.read())
-                buffer.name = file.name
-            self._from_buffer(buffer)
-        except (FileNotFoundError, IsADirectoryError) as error:
-            self._message = f"{type(error).__name__}: {error}"
+        with open(path, 'rb') as file:
+            buffer = io.BytesIO(file.read())
+            buffer.name = file.name
+        self._from_buffer(buffer)
 
     @staticmethod
     def _convert_svg2png(buffer: t.BinaryIO) -> t.BinaryIO:
@@ -130,9 +158,10 @@ class ImageBase(textual.widget.Widget):
         out.seek(0)
         return out
 
-    def _from_buffer(self, buffer: t.BinaryIO):
+    def _from_buffer(self, buffer: t.BinaryIO, mime: t.Optional[str] = None):
         buffer.seek(0)
-        mime, _ = mimetypes.guess_type(buffer.name)
+        if mime is None:
+            mime, _ = mimetypes.guess_type(buffer.name)
         if mime and mime.startswith("image/svg"):
             buffer = self._convert_svg2png(buffer)
         self.image = Image.open(buffer)
