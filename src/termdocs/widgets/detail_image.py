@@ -3,7 +3,6 @@
 r"""
 
 """
-import logging
 import math
 from textual.app import RenderableType
 from PIL import Image
@@ -44,16 +43,19 @@ class DetailImage(ImageBase):
         return round(total / (img.width * img.height))
 
     def render(self) -> RenderableType:
-        if self._image is None:
+        if self.image is None:
             return self._message.center(self.size.width)
+        self.update_current_frame()
         if self.cached:
             return self.cached
 
-        img = self._image.convert('LA')
+        img = self.image.convert('LA')
         img.thumbnail((self.size.width * 2, self.size.height * 4))
+
         tw, th = math.ceil(img.width / 2), math.ceil(img.height / 4)
         boundary = self.image_boundary(img)
         invert = boundary < (50 * 255)
+
         lines = []
         for ty in range(th):
             characters = []
@@ -72,5 +74,7 @@ class DetailImage(ImageBase):
                                 b |= OFFSETMAP[(ox, oy)]
                 characters.append(chr(OFFSET + b))
             lines.append(''.join(characters))
-        return '\n'.join(lines)
-        # return '\n'.join(line.center(self.size.width) for line in lines)
+        result = '\n'.join(lines)
+        # result = '\n'.join(line.center(self.size.width) for line in lines)
+        self.cached = result
+        return result

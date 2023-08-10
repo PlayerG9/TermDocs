@@ -1,17 +1,14 @@
 #!/usr/bin/python3
 # -*- coding=utf-8 -*-
 r"""
-Customised Version of
-https://github.com/davep/textual-canvas/blob/main/textual_canvas/canvas.py
+
 """
 import functools
-import logging
 import math
 import typing as t
 from PIL import Image
 from rich.text import Text
 import textual.app
-import textual.widget
 import textual.color
 from ._image_base import ImageBase
 
@@ -46,6 +43,7 @@ class ColorImage(ImageBase):
     def render(self) -> textual.app.RenderableType:
         if self.image is None:
             return self._message.center(self.size.width)
+        self.update_current_frame()
         if self.cached:
             return self.cached
 
@@ -104,4 +102,6 @@ class ColorImage(ImageBase):
                 characters.append(character)
 
             lines.append(''.join(characters))
-        return Text.from_ansi('\n'.join(lines) + '\033[39m\033[49m')
+        result = Text.from_ansi('\n'.join(lines) + '\033[39m\033[49m')
+        self.cached = result
+        return result
