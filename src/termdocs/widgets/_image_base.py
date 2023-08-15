@@ -51,7 +51,7 @@ class ImageBase(textual.widget.Widget):
         self._is_animated = getattr(self._image, 'is_animated', False)
         self.stop_frame_updates()
         if self._is_animated:
-            self.stop_frame_updates()
+            pass
         else:
             self._image.thumbnail((1000, 1000))  # pre-shrink for ?performance-gain?
 
@@ -70,6 +70,7 @@ class ImageBase(textual.widget.Widget):
         self.stop_frame_updates()
         self._start_time = time.time()
         # ~5fps
+        # todo: skip frames if rendering takes to long
         self._timer = self.set_interval(1 / 5, self.request_refresh)
 
     def stop_frame_updates(self):
@@ -78,7 +79,8 @@ class ImageBase(textual.widget.Widget):
             self._timer = None
 
     def on_enter(self) -> None:
-        self.start_frame_updates()
+        if self._is_animated:
+            self.start_frame_updates()
 
     def on_leave(self) -> None:
         self.stop_frame_updates()
