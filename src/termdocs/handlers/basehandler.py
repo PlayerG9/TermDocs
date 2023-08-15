@@ -11,6 +11,12 @@ import textual.reactive
 
 
 class BaseHandler(textual.widget.Widget):
+    DEFAULT_CSS = """
+    BaseHandler {
+        height: auto;
+    }
+    """
+
     filepath: Path = textual.reactive.reactive(None, layout=True)
 
     @staticmethod
