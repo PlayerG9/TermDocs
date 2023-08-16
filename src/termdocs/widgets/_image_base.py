@@ -50,9 +50,8 @@ class ImageBase(textual.widget.Widget):
         self._start_time = time.time()
         self._is_animated = getattr(self._image, 'is_animated', False)
         self.stop_frame_updates()
-        if self._is_animated:
-            pass
-        else:
+        if not self._is_animated:
+            # note: removes frames
             self._image.thumbnail((1000, 1000))  # pre-shrink for ?performance-gain?
 
     def update_current_frame(self):
