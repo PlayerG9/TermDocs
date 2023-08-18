@@ -3,12 +3,12 @@
 r"""
 
 """
-from logging import Handler, LogRecord
+import logging
 from textual.logging import active_app
 
 
-class InternLoggingHandler(Handler):
-    def emit(self, record: LogRecord) -> None:
+class InternLoggingHandler(logging.Handler):
+    def emit(self, record: logging.LogRecord) -> None:
         """Invoked by logging."""
         message = self.format(record)
         try:
@@ -17,3 +17,8 @@ class InternLoggingHandler(Handler):
             print("Failed to lookup app", exc)
         else:
             app.add_log(message)
+
+
+class SpecialModuleLoggingFilter(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        return record.name == "root"
