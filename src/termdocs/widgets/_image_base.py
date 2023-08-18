@@ -12,6 +12,7 @@ import mimetypes
 import typing as t
 import os.path as p
 import urllib.parse
+from pathlib import Path
 import httpx
 import textual.widget
 from textual.reactive import reactive, var
@@ -31,6 +32,12 @@ DECODE_MAP = {
 
 
 class ImageBase(textual.widget.Widget):
+    DEFAULT_CSS = r"""
+    ImageBase {
+        text-align: center;
+    }
+    """
+
     _message: str = reactive("<No Image set>", layout=True)
     _src: t.Optional[str] = None
     _start_time: t.Optional[float] = None
@@ -86,13 +93,13 @@ class ImageBase(textual.widget.Widget):
 
     def __init__(
             self,
-            src: t.Optional[str] = None,
+            src: t.Union[str, Path, None] = None,
             *,
             id: t.Optional[str] = None,
             classes: t.Optional[str] = None,
     ):
         super().__init__(id=id, classes=classes)
-        self._src = src
+        self._src = str(src) if isinstance(src, Path) else src
 
     async def on_mount(self):
         if self._src is not None:
@@ -101,23 +108,23 @@ class ImageBase(textual.widget.Widget):
     def request_refresh(self):
         self.refresh()
 
-    async def load(self, src: str):
-        self._src = src
+    async def load(self, src: t.Union[str, Path]):
+        self._src = src = str(src)
         self._message = "Loading..."
         try:
-            if WEB_URL_RE.match(src):
-                await self.load_web(url=src)
-            elif DATE_URL_RE.match(src):
+            if self.check_is_url(src):
+                await self.load_web_url(url=src)
+            elif self.check_is_data(src):
                 await self.load_data_url(url=src)
             elif p.isfile(src):
-                await self.load_file(path=p.abspath(src))
+                await self.load_file(path=src)
             else:
                 raise FileNotFoundError(src)
         except Exception as error:
             logging.error(f"Failed to load resource: {src}", exc_info=error)
             self._message = f"{type(error).__name__}: {error}"
 
-    async def load_web(self, url: str):
+    async def load_web_url(self, url: str):
         self._load_web(url)
 
     @textual.work(exclusive=True)
@@ -185,3 +192,15 @@ class ImageBase(textual.widget.Widget):
         if len(self._cached_frames) <= frame:
             self._cached_frames.extend([(0, None)] * (frame + 1 - len(self._cached_frames)))
         self._cached_frames[frame] = (self.size.width, rendered)
+
+    @staticmethod
+    def check_is_url(src: str) -> bool:
+        return WEB_URL_RE.match(src) is not None
+
+    @staticmethod
+    def check_is_data(src: str) -> bool:
+        return DATE_URL_RE.match(src) is not None
+
+    @staticmethod
+    def check_is_file(src: str) -> bool:
+        return not ImageBase.check_is_url(src) and not ImageBase.check_is_data(src)

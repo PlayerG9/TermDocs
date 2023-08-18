@@ -42,7 +42,7 @@ class ColorImage(ImageBase):
 
     def render(self) -> textual.app.RenderableType:
         if self.image is None:
-            return self._message.center(self.size.width)
+            return self._message
         self.update_current_frame()
         if self.cached:
             return self.cached
