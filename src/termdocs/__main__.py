@@ -14,18 +14,26 @@ import textual.reactive
 import textual.widgets
 import textual.color
 from rich.console import RenderableType
-from logging_handler import InternLoggingHandler
+from logging_handler import InternLoggingHandler, SpecialModuleLoggingFilter
 from textual.logging import TextualHandler as TextualLoggingHandler
 from handlers.register import HANDLERS
 
 
 logging.basicConfig(
     level=logging.DEBUG,
-    handlers=[logging.FileHandler("run.log", mode="w"), TextualLoggingHandler(), InternLoggingHandler()]
+    handlers=[
+        logging.FileHandler("run.log", mode="w"),
+        TextualLoggingHandler(),
+        InternLoggingHandler()
+    ],
 )
+for handler in logging.getLogger().handlers:
+    handler.addFilter(SpecialModuleLoggingFilter())
 
 
 ROOT = Path(sys.argv[1] if len(sys.argv) > 1 else ".").absolute()
+if ROOT.is_file():
+    ROOT = ROOT.parent
 
 
 class HelpPopup(textual.widgets.Static):
@@ -62,6 +70,20 @@ class TermDocs(textual.app.App):
     def watch_show_tree(self, show_tree: bool):
         self.set_class(show_tree, "-show-tree")
 
+    async def watch_path(self):
+        logging.debug(f"Selected File: {self.path}")
+        self.sub_title = self.validate_sub_title(self.path)  # noqa
+        container = self.query_one('#file-view', textual.containers.VerticalScroll)
+        await container.remove_children()
+        widget = textual.widgets.Static(f"TermDocs doesn't this support file ({self.path})")
+        worth = 0
+        for Handler in HANDLERS:
+            compatibility = Handler.supports(self.path)
+            if compatibility > worth:
+                worth = compatibility
+                widget = Handler(self.path)
+        await container.mount(widget)
+
     def add_log(self, message: RenderableType):
         try:
             log = self.query_one(LoggingConsole)
@@ -85,22 +107,15 @@ class TermDocs(textual.app.App):
     async def on_mount(self):
         logging.info("TermDocs is running")
         self.query_one(textual.widgets.DirectoryTree).focus()
+        attempts = ["README.md", "readme.md", "index.md"]
+        for name in attempts:
+            fp = ROOT / name
+            if fp.is_file():
+                self.path = fp
 
     async def on_directory_tree_file_selected(self, event: textual.widgets.DirectoryTree.FileSelected):
         event.stop()
         self.path = event.path.absolute()
-        logging.debug(f"Selected File: {self.path}")
-        self.sub_title = self.validate_sub_title(self.path)
-        container = self.query_one('#file-view', textual.containers.VerticalScroll)
-        await container.remove_children()
-        widget = textual.widgets.Static(f"TermDocs doesn't this support file ({self.path})")
-        worth = 0
-        for Handler in HANDLERS:
-            compatibility = Handler.supports(self.path)
-            if compatibility > worth:
-                worth = compatibility
-                widget = Handler(self.path)
-        await container.mount(widget)
 
     async def action_toggle_help(self):
         logging.debug("Toggle Help")

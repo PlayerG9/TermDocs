@@ -3,3 +3,4 @@ rich
 httpx
 Pillow
 cairosvg
+markdownify
