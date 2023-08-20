@@ -206,6 +206,12 @@ class MarkdownHeading(MarkdownElement):
 
     COMPONENT_CLASSES = {"em", "strong", "s", "code_inline"}
 
+    def __init__(self, node: markdown_it.tree.SyntaxTreeNode, root: 'CustomMarkdown'):
+        super().__init__(node=node, root=root)
+        self.id = self._generate_id()
+        logging.info(f"Header with id='{self.id}'")
+        self.add_class(self.node.tag)
+
     def _render_inline(self, node: markdown_it.tree.SyntaxTreeNode, style: Style = None) -> Text:
         text = Text()
         style = style or Style()
@@ -277,11 +283,6 @@ class MarkdownHeading(MarkdownElement):
         head = head_match.group(1)
         body_matches = re.finditer(r"[a-zA-Z0-9_\-]+", plain[head_match.end():])
         return head + ''.join(_.group() for _ in body_matches)
-
-    def on_mount(self):
-        self.id = self._generate_id()
-        logging.debug(f"Header with id='{self.id}'")
-        self.add_class(self.node.tag)
 
     @functools.cache
     def render(self) -> textual.app.RenderableType:
@@ -450,6 +451,30 @@ class MarkdownCodeBlock(MarkdownElement):
         return self._renderable
 
 
+class MarkdownTable(MarkdownElement):
+    pass
+
+
+class MarkdownTableHead(MarkdownElement):
+    pass
+
+
+class MarkdownTableBody(MarkdownElement):
+    pass
+
+
+class MarkdownTr(MarkdownElement):
+    pass
+
+
+class MarkdownTh(MarkdownElement):
+    pass
+
+
+class MarkdownTd(MarkdownElement):
+    pass
+
+
 class MarkdownHtmlBlock(MarkdownElement):
     DEFAULT_CSS = r"""
     MarkdownHtmlBlock {
@@ -460,8 +485,8 @@ class MarkdownHtmlBlock(MarkdownElement):
     def compose(self) -> ComposeResult:
         markdown = markdownify.markdownify(html=self.node.content)
         parser = markdown_it.MarkdownIt(
-            config="commonmark",
-            # config="gfm-like",  # github-flavored-markdown
+            # config="commonmark",
+            config="gfm-like",  # github-flavored-markdown
         )
         tokens = parser.parse(src=markdown)
         node = markdown_it.tree.SyntaxTreeNode(tokens=tokens)
@@ -486,6 +511,12 @@ HTML_MAP = dict(
     list_item=MarkdownListItem,
     blockquote=MarkdownBlockQuote,
     html_block=MarkdownHtmlBlock,
+    # table=MarkdownTable,
+    # thead=MarkdownTableHead,
+    # tbody=MarkdownTableBody,
+    # tr=MarkdownTr,
+    # th=MarkdownTh,
+    # td=MarkdownTd,
 )
 
 
@@ -530,8 +561,8 @@ class CustomMarkdown(textual.widget.Widget):
 
     async def update(self, markdown: str):
         parser = markdown_it.MarkdownIt(
-            config="commonmark",
-            # config="gfm-like",  # github-flavored-markdown
+            # config="commonmark",
+            config="gfm-like",  # github-flavored-markdown
         )
 
         tokens = parser.parse(markdown)
