@@ -45,5 +45,6 @@ class ImageHandler(BaseHandler):
             (DetailImage if self.detailed else ColorImage)(src=str(self.filepath))
         )
 
-    async def on_mouse_down(self):
+    async def on_click(self, event: textual.events.Click):
+        event.stop()
         self.detailed = not self.detailed
