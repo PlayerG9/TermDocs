@@ -3,8 +3,7 @@
 r"""
 
 """
-import sys
-from pathlib import Path
+from __version__ import __version__
 import logging
 import textual
 import textual.app
@@ -17,6 +16,7 @@ from rich.console import RenderableType
 from logging_handler import InternLoggingHandler, SpecialModuleLoggingFilter
 from textual.logging import TextualHandler as TextualLoggingHandler
 from handlers.register import HANDLERS
+import configuration
 
 
 logging.basicConfig(
@@ -31,14 +31,9 @@ for handler in logging.getLogger().handlers:
     handler.addFilter(SpecialModuleLoggingFilter())
 
 
-ROOT = Path(sys.argv[1] if len(sys.argv) > 1 else ".").absolute()
-if ROOT.is_file():
-    ROOT = ROOT.parent
-
-
 class HelpPopup(textual.widgets.Static):
     def compose(self) -> textual.app.ComposeResult:
-        yield textual.widgets.Static("TermDocs Help")
+        yield textual.widgets.Static(f"TermDocs v{__version__} Help")
         with textual.containers.Container():
             yield textual.widgets.Static("Hello World")
 
@@ -51,7 +46,7 @@ class TermDocs(textual.app.App):
     CSS_PATH = "style.css"
 
     TITLE = "TermDocs"
-    SUB_TITLE = str(ROOT)
+    SUB_TITLE = str(configuration.index_file)
 
     BINDINGS = [
         textual.app.Binding("ctrl+q", "quit", "Quit"),  # general unix-like (ctrl+c is also possible)
@@ -64,7 +59,7 @@ class TermDocs(textual.app.App):
 
     LOGGING_STACK = []
 
-    path = textual.reactive.var(None)
+    path = textual.reactive.var(configuration.index_file)
     show_tree = textual.reactive.var(True)
 
     def watch_show_tree(self, show_tree: bool):
@@ -75,11 +70,13 @@ class TermDocs(textual.app.App):
         self.sub_title = self.validate_sub_title(self.path)  # noqa
         container = self.query_one('#file-view', textual.containers.VerticalScroll)
         await container.remove_children()
+        if not self.path:
+            return
         widget = textual.widgets.Static(f"TermDocs doesn't this support file ({self.path})")
         worth = 0
         for Handler in HANDLERS:
             compatibility = Handler.supports(self.path)
-            if compatibility > worth:
+            if compatibility and compatibility > worth:
                 worth = compatibility
                 widget = Handler(self.path)
         await container.mount(widget)
@@ -100,18 +97,14 @@ class TermDocs(textual.app.App):
         yield LoggingConsole(classes="-hidden", wrap=False, highlight=True, markup=True)
         with textual.containers.Container():
             yield HelpPopup(classes="-hidden")
-            yield textual.widgets.DirectoryTree(ROOT, id="tree-view")
+            yield textual.widgets.DirectoryTree(configuration.root_dir, id="tree-view")
             yield textual.containers.VerticalScroll(id="file-view")
         yield textual.widgets.Footer()
 
     async def on_mount(self):
         logging.info("TermDocs is running")
         self.query_one(textual.widgets.DirectoryTree).focus()
-        attempts = ["README.md", "readme.md", "index.md"]
-        for name in attempts:
-            fp = ROOT / name
-            if fp.is_file():
-                self.path = fp
+        self.show_tree = not configuration.is_custom_file
 
     async def on_directory_tree_file_selected(self, event: textual.widgets.DirectoryTree.FileSelected):
         event.stop()
