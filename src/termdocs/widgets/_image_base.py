@@ -21,6 +21,7 @@ import cairosvg
 from PIL import Image
 
 
+WEB_IMAGE_MAX_SIZE = 1024*1024*10  # ~10MB
 WEB_URL_RE = re.compile(r"^https?://")
 DATE_URL_RE = re.compile(r"^data:(?P<mimetype>[\w\-.]+/[\w\-.]+)(?:;(?P<encoding>\w+))?,(?P<data>.*)$")
 DECODE_MAP = {
@@ -133,7 +134,13 @@ class ImageBase(textual.widget.Widget):
             async with httpx.AsyncClient() as client:
                 response = await client.get(url)
                 response.raise_for_status()
-                buffer = io.BytesIO(await response.aread())
+                if response.headers.get('Content-Length') > WEB_IMAGE_MAX_SIZE:
+                    raise PermissionError("Web-Resource is too big")
+                buffer = io.BytesIO()
+                async for chunk in response.aiter_bytes(1024*10):  # ~10Kb/chunk
+                    if response.num_bytes_downloaded > WEB_IMAGE_MAX_SIZE:
+                        raise PermissionError("Web-Resource is too big")
+                    buffer.write(chunk)
                 buffer.name = p.basename(urllib.parse.urlparse(url).path)
                 self._from_buffer(buffer)
         except Exception as error:
