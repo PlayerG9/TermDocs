@@ -7,7 +7,8 @@ Full support for all markdown features
 - paragraphs
 - styling (**bold**, *italic*, ~~strikethrough~~, `inline code`)
 - ```diff
-  + code blocks (with syntax-highlighting)```
+  + code blocks (with syntax-highlighting)
+  ```
 - > cites
 - lists
   - with sublists
