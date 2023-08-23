@@ -2,6 +2,13 @@
 
 This Markdown file contains some examples of Markdown widgets.
 
+- [Headers](#headers)
+- [Typography](#typography)
+- [Horizontal-Rule](#horizontal-rule)
+- [Lists](#lists)
+- [Code/Fences](#fences)
+- [Tables](#tables)
+
 ## Headers
 
 Headers levels 1 through 6 are supported.
