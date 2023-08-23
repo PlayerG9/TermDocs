@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 # -*- coding=utf-8 -*-
 r"""
-
+TODO: html_inline in text/header
 """
 import logging
 import functools

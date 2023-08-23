@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 # -*- coding=utf-8 -*-
 r"""
-
+TODO: replace ._image with ._frames with thumbnailed versions of the frames
 """
 import io
 import re
