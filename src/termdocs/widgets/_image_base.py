@@ -128,9 +128,9 @@ class ImageBase(textual.widget.Widget):
 
     async def load_web_url(self, url: str):
         logging.debug(f"Loading image from web: {url[-40:]}")
-        self._load_web(url)
+        self._load_web(url=url)
 
-    @textual.work(exclusive=True)
+    @textual.work(exit_on_error=False, exclusive=True)
     async def _load_web(self, url: str):
         try:
             async with httpx.AsyncClient() as client:
@@ -156,7 +156,7 @@ class ImageBase(textual.widget.Widget):
         mimetype = groups.get("mimetype")
         encoding = groups.get("encoding")
         # https://stackoverflow.com/questions/2941995/python-ignore-incorrect-padding-error-when-base64-decoding
-        data = groups.get("data") + '=='
+        data = groups.get("data") + '=='  # + part fixes padding
         if encoding not in DECODE_MAP:
             raise LookupError(f"Unsupported encoding: {encoding}")
         decoder = DECODE_MAP[encoding]
