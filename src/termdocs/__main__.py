@@ -22,6 +22,8 @@ from util import Compatibility
 
 logging.basicConfig(
     level=logging.DEBUG,
+    format="{asctime} | {levelname:.3} | {name:10} | {module:15} | {funcName:20} | {lineno:3} | {message}",
+    style='{',
     handlers=[
         logging.FileHandler("run.log", mode="w"),
         TextualLoggingHandler(),
