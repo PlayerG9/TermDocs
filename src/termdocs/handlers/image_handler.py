@@ -12,6 +12,7 @@ import textual.binding
 import textual.reactive
 import textual.containers
 from widgets import ColorImage, DetailImage
+from util import Compatibility
 from .basehandler import BaseHandler
 from .register import register_handler
 
@@ -19,9 +20,11 @@ from .register import register_handler
 @register_handler
 class ImageHandler(BaseHandler):
     @staticmethod
-    def supports(filepath: Path):
+    def supports(filepath: Path) -> Compatibility:
         mime, _ = mimetypes.guess_type(filepath.name)
-        return mime and mime.startswith("image/")
+        if mime and mime.startswith("image/"):
+            return Compatibility.HIGH
+        return Compatibility.NONE
 
     detailed: bool = textual.reactive.reactive(False)
 

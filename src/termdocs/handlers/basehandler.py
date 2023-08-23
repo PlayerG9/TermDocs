@@ -8,6 +8,7 @@ from pathlib import Path
 from abc import abstractmethod
 import textual.widget
 import textual.reactive
+from util import Compatibility
 
 
 class BaseHandler(textual.widget.Widget):
@@ -21,7 +22,7 @@ class BaseHandler(textual.widget.Widget):
 
     @staticmethod
     @abstractmethod
-    def supports(file: Path) -> int:
+    def supports(file: Path) -> Compatibility:
         raise NotImplementedError()
 
     def __init__(
