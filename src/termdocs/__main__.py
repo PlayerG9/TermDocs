@@ -55,7 +55,8 @@ class TermDocs(textual.app.App):
         textual.app.Binding("f", "toggle_files", "Toggle Files"),
         textual.app.Binding("h", "toggle_help", "Toggle Help"),
         textual.app.Binding("ctrl+d", "toggle_dark", "Toggle Dark-Mode", show=False),
-        textual.app.Binding("f1", "toggle_console", "Debug", show=False, priority=False)
+        textual.app.Binding("f1", "toggle_console", "Debug", show=False, priority=False),
+        textual.app.Binding("f5", "screenshot", "Screenshot", show=False, priority=False),
     ]
 
     LOGGING_STACK = []
