@@ -305,6 +305,7 @@ class MarkdownImage(MarkdownElement):
     MarkdownImage {
         width: 1fr;
         height: 70vh;
+        max-height: 50w;
     }
     """
 
@@ -452,27 +453,91 @@ class MarkdownCodeBlock(MarkdownElement):
 
 
 class MarkdownTable(MarkdownElement):
-    pass
+    DEFAULT_CSS = r"""
+    MarkdownTable {
+        layout: vertical;
+        /*background: $primary-background-lighten-1;*/
+        border: round $primary-background-lighten-2;
+    }
+    """
+
+    def compose(self) -> ComposeResult:
+        yield from render_node(node=self.node, root=self.root)
+
+
+class MarkdownTableSeparator(MarkdownElement):
+    DEFAULT_CSS = r"""
+    MarkdownTableSeparator {
+        height: 1;
+        border-top: solid $primary-background-lighten-2;
+    }
+    """
+
+    def __init__(self):
+        textual.widget.Widget.__init__(self)
 
 
 class MarkdownTableHead(MarkdownElement):
-    pass
+    DEFAULT_CSS = r"""
+    MarkdownTableHead {
+        layout: vertical;
+        /*border-bottom: solid $primary-background-lighten-2;*/
+    }
+    """
+
+    def compose(self) -> ComposeResult:
+        yield from render_node(node=self.node, root=self.root)
 
 
 class MarkdownTableBody(MarkdownElement):
-    pass
+    DEFAULT_CSS = r"""
+    MarkdownTableBody {
+        layout: vertical;
+    }
+    """
+
+    def compose(self) -> ComposeResult:
+        for element in render_node(node=self.node, root=self.root):
+            yield MarkdownTableSeparator()
+            yield element
 
 
 class MarkdownTr(MarkdownElement):
-    pass
+    DEFAULT_CSS = r"""
+    MarkdownTr {
+        layout: horizontal;
+        padding: 0 1;
+    }
+    """
+
+    def compose(self) -> ComposeResult:
+        yield from render_node(node=self.node, root=self.root)
 
 
 class MarkdownTh(MarkdownElement):
-    pass
+    DEFAULT_CSS = r"""
+    MarkdownTh {
+        layout: vertical;
+        text-style: bold italic;
+        width: 1fr;
+        padding: 0 1;
+    }
+    """
+
+    def compose(self) -> ComposeResult:
+        yield from render_node(node=self.node, root=self.root)
 
 
 class MarkdownTd(MarkdownElement):
-    pass
+    DEFAULT_CSS = r"""
+    MarkdownTd {
+        layout: vertical;
+        width: 1fr;
+    }
+    """
+
+    def compose(self) -> ComposeResult:
+        yield from render_node(node=self.node, root=self.root)
 
 
 class MarkdownHtmlBlock(MarkdownElement):
@@ -511,19 +576,19 @@ HTML_MAP = dict(
     list_item=MarkdownListItem,
     blockquote=MarkdownBlockQuote,
     html_block=MarkdownHtmlBlock,
-    # table=MarkdownTable,
-    # thead=MarkdownTableHead,
-    # tbody=MarkdownTableBody,
-    # tr=MarkdownTr,
-    # th=MarkdownTh,
-    # td=MarkdownTd,
+    table=MarkdownTable,
+    thead=MarkdownTableHead,
+    tbody=MarkdownTableBody,
+    tr=MarkdownTr,
+    th=MarkdownTh,
+    td=MarkdownTd,
 )
 
 
 def render_node(node: markdown_it.tree.SyntaxTreeNode, root: 'CustomMarkdown'):
     for node in node.children:
-        logging.debug(f"{node}")
-        yield HTML_MAP.get(node.type, UnknownElement)(node=node, root=root)
+        node_type = HTML_MAP.get(node.type, UnknownElement)
+        yield node_type(node=node, root=root)
 
 
 class CustomMarkdown(textual.widget.Widget):
