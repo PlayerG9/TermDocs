@@ -3,6 +3,7 @@
 r"""
 
 """
+import logging
 from pathlib import Path
 import textual.app
 import textual.widgets
@@ -29,6 +30,7 @@ class TextHandler(BaseHandler):
         text = self.query_one(textual.widgets.Static)
         content = self.filepath.read_text()
         lexer = rich.syntax.Syntax.guess_lexer(path=str(self.filepath))
+        logging.debug(f"guessed language is {lexer!r}")
         syntax = rich.syntax.Syntax(
             code=content,
             lexer=lexer,

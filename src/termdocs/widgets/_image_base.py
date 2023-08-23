@@ -111,6 +111,7 @@ class ImageBase(textual.widget.Widget):
 
     async def load(self, src: t.Union[str, Path]):
         self._src = src = str(src)
+        logging.debug(f"Loading image: {src[-40:]}")
         self._message = "Loading..."
         try:
             if self.check_is_url(src):
@@ -126,6 +127,7 @@ class ImageBase(textual.widget.Widget):
             self._message = f"{type(error).__name__}: {error}"
 
     async def load_web_url(self, url: str):
+        logging.debug(f"Loading image from web: {url[-40:]}")
         self._load_web(url)
 
     @textual.work(exclusive=True)
@@ -148,6 +150,7 @@ class ImageBase(textual.widget.Widget):
             self._message = f"{type(error).__name__}: {error}"
 
     async def load_data_url(self, url: str):
+        logging.debug(f"Loading image from data-url: {url[-40:]}")
         match = DATE_URL_RE.match(url)
         groups = match.groupdict()
         mimetype = groups.get("mimetype")
@@ -161,6 +164,7 @@ class ImageBase(textual.widget.Widget):
         self._from_buffer(buffer, mime=mimetype)
 
     async def load_file(self, path: str):
+        logging.debug(f"Loading image from file: {path[-40:]}")
         with open(path, 'rb') as file:
             buffer = io.BytesIO(file.read())
             buffer.name = file.name
@@ -178,9 +182,10 @@ class ImageBase(textual.widget.Widget):
         if mime is None:
             mime, _ = mimetypes.guess_type(buffer.name)
         if mime and mime.startswith("image/svg"):
+            logging.debug("svg detected. Rendering to png")
             buffer = self._convert_svg2png(buffer)
-        self.image = Image.open(buffer)
         self._cached_frames.clear()
+        self.image = Image.open(buffer)
 
     @property
     def cached(self) -> t.Optional[textual.widget.RenderableType]:

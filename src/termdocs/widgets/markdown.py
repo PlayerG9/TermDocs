@@ -118,7 +118,8 @@ class MarkdownInline(MarkdownElement):
                     style=style + self.get_component_rich_style(node.type, partial=True)
                 )
             else:
-                logging.debug(f"Unknown node-type: {node.type}")
+                logging.warning(f"Unknown node-type: {node.type}")
+                logging.debug(f"{vars(node)}")
 
     def _clean_compose(self, composed: iter):
         text = Text()
@@ -260,7 +261,8 @@ class MarkdownHeading(MarkdownElement):
                     )
                 )
             else:
-                logging.debug(f"Unknown node-type: {node.type}")
+                logging.warning(f"Unknown node-type: {node.type}")
+                logging.debug(f"{vars(node)}")
         return text
 
     def _render_plaintext(self, node: markdown_it.tree.SyntaxTreeNode) -> str:
