@@ -7,6 +7,7 @@ from pathlib import Path
 import textual.app
 import textual.widgets
 import rich.syntax
+from util import Compatibility
 from .basehandler import BaseHandler
 from .register import register_handler
 
@@ -14,10 +15,12 @@ from .register import register_handler
 @register_handler
 class TextHandler(BaseHandler):
     @staticmethod
-    def supports(file: Path) -> int:
+    def supports(file: Path) -> Compatibility:
         import mimetypes
         mime, _ = mimetypes.guess_type(file.name)
-        return mime and mime.startswith("text/")
+        if mime and mime.startswith("text/"):
+            return Compatibility.DEFAULT
+        return Compatibility.NONE
 
     def compose(self) -> textual.app.ComposeResult:
         yield textual.widgets.Static(markup=False)

@@ -12,11 +12,12 @@ import textual.containers
 import textual.reactive
 import textual.widgets
 import textual.color
-from rich.console import RenderableType
+import rich.text
 from logging_handler import InternLoggingHandler, SpecialModuleLoggingFilter
 from textual.logging import TextualHandler as TextualLoggingHandler
 from handlers.register import HANDLERS
 import configuration
+from util import Compatibility
 
 
 logging.basicConfig(
@@ -72,16 +73,20 @@ class TermDocs(textual.app.App):
         await container.remove_children()
         if not self.path:
             return
-        widget = textual.widgets.Static(f"TermDocs doesn't this support file ({self.path})")
-        worth = 0
+        widget = textual.widgets.Static(
+            rich.text.Text(f"TermDocs doesn't this support file ({self.path})")
+            + rich.text.Text('\n') +
+            rich.text.Text("open as text", style=rich.text.Style.from_meta({'@click': "open_as_text()"}))
+        )
+        compatibility = Compatibility.NONE
         for Handler in HANDLERS:
-            compatibility = Handler.supports(self.path)
-            if compatibility and compatibility > worth:
-                worth = compatibility
+            handler_comp = Handler.supports(self.path)
+            if handler_comp and handler_comp > compatibility:
+                compatibility = handler_comp
                 widget = Handler(self.path)
         await container.mount(widget)
 
-    def add_log(self, message: RenderableType):
+    def add_log(self, message: textual.app.RenderableType):
         try:
             log = self.query_one(LoggingConsole)
         except textual.css.query.NoMatches:
@@ -127,6 +132,12 @@ class TermDocs(textual.app.App):
     async def action_toggle_files(self) -> None:
         """Called in response to key binding."""
         self.show_tree = not self.show_tree
+
+    async def action_open_as_text(self):
+        from handlers.text_handler import TextHandler
+        container = self.query_one('#file-view', textual.containers.VerticalScroll)
+        await container.remove_children()
+        await container.mount(TextHandler(path=self.path))
 
 
 if __name__ == '__main__':

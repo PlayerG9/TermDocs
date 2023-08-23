@@ -8,6 +8,7 @@ from pathlib import Path
 import textual.app
 import textual.widgets
 from widgets import Markdown
+from util import Compatibility
 from .basehandler import BaseHandler
 from .register import register_handler
 
@@ -15,8 +16,10 @@ from .register import register_handler
 @register_handler
 class MarkdownHandler(BaseHandler):
     @staticmethod
-    def supports(file: Path):
-        return 2 if file.is_file() and file.suffix == ".md" else 0
+    def supports(file: Path) -> Compatibility:
+        if file.suffix == ".md":
+            return Compatibility.HIGH
+        return Compatibility.NONE
 
     def compose(self) -> textual.app.ComposeResult:
         yield Markdown(file=self.filepath)

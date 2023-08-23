@@ -12,3 +12,4 @@ HANDLERS: t.List[t.Type[BaseHandler]] = []
 
 def register_handler(cls: t.Type[BaseHandler]):
     HANDLERS.append(cls)
+    return cls
