@@ -4,7 +4,6 @@ r"""
 TODO: replace ._image with ._frames with thumbnailed versions of the frames
 """
 import io
-import re
 import time
 import base64
 import logging
@@ -19,11 +18,10 @@ from textual.reactive import reactive, var
 import textual.timer
 import cairosvg
 from PIL import Image
+from util.href import HyperRef, DATE_URL_RE
 
 
 WEB_IMAGE_MAX_SIZE = 1024*1024*10  # ~10MB
-WEB_URL_RE = re.compile(r"^https?://")
-DATE_URL_RE = re.compile(r"^data:(?P<mimetype>[\w\-.]+/[\w\-.]+)(?:;(?P<encoding>\w+))?,(?P<data>.*)$")
 DECODE_MAP = {
     'base16': base64.b16decode,
     'base32': base64.b32decode,
@@ -54,6 +52,7 @@ class ImageBase(textual.widget.Widget):
 
     @image.setter
     def image(self, new: Image.Image):
+        self._cached_frames.clear()
         self._image = new
         self._start_time = time.time()
         self._is_animated = getattr(self._image, 'is_animated', False)
@@ -95,16 +94,22 @@ class ImageBase(textual.widget.Widget):
     def __init__(
             self,
             src: t.Union[str, Path, None] = None,
+            delayed: bool = False,
             *,
             id: t.Optional[str] = None,
             classes: t.Optional[str] = None,
     ):
         super().__init__(id=id, classes=classes)
         self._src = str(src) if isinstance(src, Path) else src
+        self._delayed = delayed
 
     async def on_mount(self):
         if self._src is not None:
-            await self.load(self._src)
+            if self._delayed:
+                self._message = "Loading..."
+                self.set_timer(0.2, lambda: self.load(self._src))
+            else:
+                await self.load(self._src)
 
     def request_refresh(self):
         self.refresh()
@@ -113,18 +118,14 @@ class ImageBase(textual.widget.Widget):
         self._src = src = str(src)
         logging.debug(f"Loading image: {src[-40:]}")
         self._message = "Loading..."
-        try:
-            if self.check_is_url(src):
-                await self.load_web_url(url=src)
-            elif self.check_is_data(src):
-                await self.load_data_url(url=src)
-            elif p.isfile(src):
-                await self.load_file(path=src)
-            else:
-                raise FileNotFoundError(src)
-        except Exception as error:
-            logging.error(f"Failed to load resource: {src}", exc_info=error)
-            self._message = f"{type(error).__name__}: {error}"
+        if HyperRef.check_is_url(src):
+            await self.load_web_url(url=src)
+        elif HyperRef.check_is_data(src):
+            await self.load_data_url(url=src)
+        elif HyperRef.check_is_file(src):
+            await self.load_file(path=src)
+        else:
+            raise TypeError(src)
 
     async def load_web_url(self, url: str):
         logging.debug(f"Loading image from web: {url[-40:]}")
@@ -151,24 +152,40 @@ class ImageBase(textual.widget.Widget):
 
     async def load_data_url(self, url: str):
         logging.debug(f"Loading image from data-url: {url[-40:]}")
-        match = DATE_URL_RE.match(url)
-        groups = match.groupdict()
-        mimetype = groups.get("mimetype")
-        encoding = groups.get("encoding")
-        # https://stackoverflow.com/questions/2941995/python-ignore-incorrect-padding-error-when-base64-decoding
-        data = groups.get("data") + '=='  # + part fixes padding
-        if encoding not in DECODE_MAP:
-            raise LookupError(f"Unsupported encoding: {encoding}")
-        decoder = DECODE_MAP[encoding]
-        buffer = io.BytesIO(decoder(data))
-        self._from_buffer(buffer, mime=mimetype)
+        self._load_data_url(url=url)
+
+    @textual.work(exit_on_error=False, exclusive=True)
+    async def _load_data_url(self, url: str):
+        try:
+            match = DATE_URL_RE.match(url)
+            groups = match.groupdict()
+            mimetype = groups.get("mimetype")
+            encoding = groups.get("encoding")
+            # https://stackoverflow.com/questions/2941995/python-ignore-incorrect-padding-error-when-base64-decoding
+            data = groups.get("data") + '=='  # + part fixes padding
+            if encoding not in DECODE_MAP:
+                raise LookupError(f"Unsupported encoding: {encoding}")
+            decoder = DECODE_MAP[encoding]
+            buffer = io.BytesIO(decoder(data))
+            self._from_buffer(buffer, mime=mimetype)
+        except Exception as error:
+            logging.error(f"Failed to load resource: {url}", exc_info=error)
+            self._message = f"{type(error).__name__}: {error}"
 
     async def load_file(self, path: str):
         logging.debug(f"Loading image from file: {path[-40:]}")
-        with open(path, 'rb') as file:
-            buffer = io.BytesIO(file.read())
-            buffer.name = file.name
-        self._from_buffer(buffer)
+        self._load_file(path=path)
+
+    @textual.work(exit_on_error=False, exclusive=True)
+    async def _load_file(self, path: str):
+        try:
+            with open(path, 'rb') as file:
+                buffer = io.BytesIO(file.read())
+                buffer.name = file.name
+            self._from_buffer(buffer)
+        except Exception as error:
+            logging.error(f"Failed to load resource: {path}", exc_info=error)
+            self._message = f"{type(error).__name__}: {error}"
 
     @staticmethod
     def _convert_svg2png(buffer: t.BinaryIO) -> t.BinaryIO:
@@ -184,8 +201,8 @@ class ImageBase(textual.widget.Widget):
         if mime and mime.startswith("image/svg"):
             logging.debug("svg detected. Rendering to png")
             buffer = self._convert_svg2png(buffer)
-        self._cached_frames.clear()
-        self.image = Image.open(buffer)
+        image = Image.open(buffer)
+        self.image = image
 
     @property
     def cached(self) -> t.Optional[textual.widget.RenderableType]:
@@ -204,15 +221,3 @@ class ImageBase(textual.widget.Widget):
         if len(self._cached_frames) <= frame:
             self._cached_frames.extend([(0, None)] * (frame + 1 - len(self._cached_frames)))
         self._cached_frames[frame] = (self.size.width, rendered)
-
-    @staticmethod
-    def check_is_url(src: str) -> bool:
-        return WEB_URL_RE.match(src) is not None
-
-    @staticmethod
-    def check_is_data(src: str) -> bool:
-        return DATE_URL_RE.match(src) is not None
-
-    @staticmethod
-    def check_is_file(src: str) -> bool:
-        return not ImageBase.check_is_url(src) and not ImageBase.check_is_data(src)

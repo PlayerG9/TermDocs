@@ -19,6 +19,7 @@ import markdown_it
 import markdown_it.tree
 import markdown_it.token
 import markdownify
+from util import HyperRef
 from .color_image import ColorImage
 from .detail_image import DetailImage
 
@@ -42,7 +43,7 @@ class MarkdownElement(textual.widget.Widget):
     async def action_link(self, href: str) -> None:
         """Called on link click."""
         logging.debug(f"action_link({href!r})")
-        if href.startswith("#"):
+        if HyperRef.check_is_idref(href):
             widget = self.app.query_one(href)
             self.scroll_to_center(widget=widget, animate=True)
         else:
@@ -315,14 +316,11 @@ class MarkdownImage(MarkdownElement):
 
     @functools.cached_property
     def href(self) -> str:
-        import os.path as p
         href = self.node.attrGet("src")
-        if ColorImage.check_is_file(href) and not p.isabs(href):
-            href = p.join(self.root.DIR, href)
-        return href
+        return str(HyperRef(href).absolute(to=self.root.DIR))
 
     async def watch_detailed(self):
-        await self.update()
+        await self.update_color_widget()
 
     def compose(self) -> textual.app.ComposeResult:
         yield textual.containers.Container()
@@ -334,11 +332,11 @@ class MarkdownImage(MarkdownElement):
             await container.mount(widget)
 
     async def on_mount(self):
-        await self.update()
+        await self.update_color_widget()
 
-    async def update(self):
+    async def update_color_widget(self):
         await self._set_image_widget(
-            (DetailImage if self.detailed else ColorImage)(src=self.href)
+            (DetailImage if self.detailed else ColorImage)(src=self.href, delayed=True)
         )
 
     async def on_click(self, event: textual.events.Click):
@@ -623,10 +621,10 @@ class CustomMarkdown(textual.widget.Widget):
             await self.load(self.file)
 
     async def load(self, file: Path):
-        self.DIR = file.parent
-        await self.update(file.read_text(encoding='utf-8'))
+        await self.update(markdown=file.read_text(encoding='utf-8'), src_dir=file.parent)
 
-    async def update(self, markdown: str):
+    async def update(self, markdown: str, src_dir: Path = None):
+        self.DIR = src_dir or Path.cwd()
         parser = markdown_it.MarkdownIt(
             # config="commonmark",
             config="gfm-like",  # github-flavored-markdown

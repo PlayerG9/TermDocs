@@ -5,6 +5,7 @@ r"""
 """
 from __version__ import __version__
 import logging
+import pathlib
 import textual
 import textual.app
 import textual.css.query
@@ -75,19 +76,25 @@ class TermDocs(textual.app.App):
         container = self.query_one('#file-view', textual.containers.VerticalScroll)
         await container.remove_children()
         if not self.path:
-            return
-        widget = textual.widgets.Static(
-            rich.text.Text(f"TermDocs doesn't this support file ({self.path})")
-            + rich.text.Text('\n') +
-            rich.text.Text("open as text", style=rich.text.Style.from_meta({'@click': "open_as_text()"}))
-        )
-        compatibility = Compatibility.NONE
-        for Handler in HANDLERS:
-            handler_comp = Handler.supports(self.path)
-            if handler_comp and handler_comp > compatibility:
-                compatibility = handler_comp
-                widget = Handler(self.path)
-        await container.mount(widget)
+            pass  # nothing
+        elif not self.path.is_file():
+            widget = textual.widgets.Static(
+                f"The file {self.format_path(self.path)} doesn't exist"
+            )
+            await container.mount(widget)
+        else:
+            widget = textual.widgets.Static(
+                rich.text.Text(f"TermDocs doesn't this support file ({self.format_path(self.path)})")
+                + rich.text.Text('\n') +
+                rich.text.Text("open as text", style=rich.text.Style.from_meta({'@click': "open_as_text()"}))
+            )
+            compatibility = Compatibility.NONE
+            for Handler in HANDLERS:
+                handler_comp = Handler.supports(self.path)
+                if handler_comp and handler_comp > compatibility:
+                    compatibility = handler_comp
+                    widget = Handler(self.path)
+            await container.mount(widget)
 
     def add_log(self, message: textual.app.RenderableType):
         try:
@@ -141,6 +148,13 @@ class TermDocs(textual.app.App):
         container = self.query_one('#file-view', textual.containers.VerticalScroll)
         await container.remove_children()
         await container.mount(TextHandler(path=self.path))
+
+    @staticmethod
+    def format_path(path: pathlib.Path) -> str:
+        try:
+            return str(path.relative_to(configuration.root_dir))
+        except ValueError:
+            return str(path)
 
 
 if __name__ == '__main__':

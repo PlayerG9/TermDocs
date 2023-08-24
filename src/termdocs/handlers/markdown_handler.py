@@ -8,7 +8,7 @@ from pathlib import Path
 import textual.app
 import textual.widgets
 from widgets import Markdown
-from util import Compatibility
+from util import Compatibility, HyperRef
 from .basehandler import BaseHandler
 from .register import register_handler
 
@@ -25,4 +25,8 @@ class MarkdownHandler(BaseHandler):
         yield Markdown(file=self.filepath)
 
     def on_custom_markdown_link_clicked(self, event: Markdown.LinkClicked):
-        logging.info(event)
+        href = HyperRef(event.href)
+        if href.check_is_file():
+            self.app.path = href.absolute(to=self.app.path).as_path()
+        else:
+            logging.error(f"Can't handle link {href!r}")
