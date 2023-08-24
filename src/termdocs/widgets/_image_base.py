@@ -190,7 +190,7 @@ class ImageBase(textual.widget.Widget):
     @staticmethod
     def _convert_svg2png(buffer: t.BinaryIO) -> t.BinaryIO:
         out = io.BytesIO()
-        cairosvg.svg2png(file_obj=buffer, write_to=out)
+        cairosvg.svg2png(file_obj=buffer, write_to=out, output_height=500)
         out.seek(0)
         return out
 
