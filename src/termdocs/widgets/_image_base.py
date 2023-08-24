@@ -195,13 +195,15 @@ class ImageBase(textual.widget.Widget):
         return out
 
     def _from_buffer(self, buffer: t.BinaryIO, mime: t.Optional[str] = None):
+        formats = None
         buffer.seek(0)
         if mime is None:
             mime, _ = mimetypes.guess_type(buffer.name)
         if mime and mime.startswith("image/svg"):
             logging.debug("svg detected. Rendering to png")
             buffer = self._convert_svg2png(buffer)
-        image = Image.open(buffer)
+            formats = ["PNG"]
+        image = Image.open(buffer, formats=formats)
         self.image = image
 
     @property
