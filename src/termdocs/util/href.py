@@ -22,7 +22,10 @@ class HyperRef:
         return self._href
 
     def __repr__(self) -> str:
-        return f"<{self._href[-50:]}>"
+        if self.check_is_url():
+            return f"<{self._href[:50]}>"
+        else:
+            return f"<{self._href[-50:]}>"
 
     def as_path(self) -> Path:
         return Path(self._href)

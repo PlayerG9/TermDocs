@@ -4,9 +4,12 @@ r"""
 
 """
 from __version__ import __version__
+import logging
+import webbrowser
 import textual.app
 import textual.widget
-import widgets
+from .markdown import CustomMarkdown as Markdown
+from util import HyperRef
 
 
 MESSAGE = fr"""
@@ -43,7 +46,14 @@ TermDocs is an interactive terminal markdown-documentation viewer with support f
 
 class HelpWidget(textual.widget.Widget):
     def compose(self) -> textual.app.ComposeResult:
-        yield widgets.Markdown()
+        yield Markdown()
 
     async def on_mount(self):
-        await self.query_one(widgets.Markdown).update(markdown=MESSAGE)
+        await self.query_one(Markdown).update(markdown=MESSAGE)
+
+    @textual.on(Markdown.LinkClicked)
+    async def on_link_clicked(self, event: Markdown.LinkClicked):
+        href = HyperRef(event.href)
+        logging.debug(f"Open url in browser: {href!r}")
+        if not webbrowser.open(url=str(href)):
+            logging.error(f"Can't open url: {href}")

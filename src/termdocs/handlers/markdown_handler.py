@@ -25,7 +25,8 @@ class MarkdownHandler(BaseHandler):
     def compose(self) -> textual.app.ComposeResult:
         yield Markdown(file=self.filepath)
 
-    def on_custom_markdown_link_clicked(self, event: Markdown.LinkClicked):
+    @textual.on(Markdown.LinkClicked)
+    def on_markdown_link_clicked(self, event: Markdown.LinkClicked):
         href = HyperRef(event.href)
         if href.check_is_file():
             path = href.absolute(to=self.app.path).as_path()
