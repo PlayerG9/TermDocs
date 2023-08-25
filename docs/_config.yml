@@ -1,7 +1,7 @@
 title: TermDocs
 description: interactive terminal markdown-documentation viewer
-theme: just-the-docs
-#remote_theme: just-the-docs/just-the-docs@v0.4.2
+#theme: just-the-docs
+remote_theme: just-the-docs/just-the-docs@v0.4.2
 
 baseurl: "/TermDocs" # the subpath of your site, e.g. /blog
 

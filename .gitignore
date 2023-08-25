@@ -1,7 +1,7 @@
 # Custom
 .idea/
 test-scripts/
-#docs/Gemfile
+docs/Gemfile
 docs/Gemfile.lock
 docs/_site/
 docs/.jekyll-cache/
