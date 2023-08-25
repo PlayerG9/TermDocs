@@ -45,8 +45,12 @@ class MarkdownElement(textual.widget.Widget):
         """Called on link click."""
         logging.debug(f"action_link({href!r})")
         if HyperRef.check_is_idref(href):
-            widget = self.app.query_one(href)
-            self.scroll_to_center(widget=widget, animate=True)
+            try:
+                widget = self.app.query_one(href)
+            except textual.app.NoMatches as exc:
+                logging.error(f"No Header with id {href!r}", exc_info=exc)
+            else:
+                self.scroll_to_center(widget=widget, animate=True)
         else:
             self.post_message(CustomMarkdown.LinkClicked(root=self.root, href=href))
 
