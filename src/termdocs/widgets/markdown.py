@@ -5,6 +5,7 @@ TODO: html_inline in text/header
 """
 import logging
 import functools
+import typing as t
 from pathlib import Path
 import textual.events
 import textual.widget
@@ -290,7 +291,18 @@ class MarkdownHeading(MarkdownElement):
         head_match = re.match(r"[^a-zA-Z_\-]*([a-zA-Z_\-])", plain)
         head = head_match.group(1)
         body_matches = re.finditer(r"[a-zA-Z0-9_\-]+", plain[head_match.end():])
-        return head + ''.join(_.group() for _ in body_matches)
+        base_id = head + ''.join(_.group() for _ in body_matches)
+        real_id = base_id
+        i = 0
+        while True:
+            try:
+                self.app.query_one(f"#{real_id}")
+            except textual.app.NoMatches:
+                break
+            else:
+                i += 1
+                real_id = f"{base_id}-{i}"
+        return real_id
 
     @functools.cache
     def render(self) -> textual.app.RenderableType:
@@ -622,6 +634,7 @@ class CustomMarkdown(textual.widget.Widget):
         def control(self) -> 'CustomMarkdown':
             return self.root
 
+
     async def on_mount(self):
         if self.file:
             await self.load(self.file)
@@ -629,8 +642,8 @@ class CustomMarkdown(textual.widget.Widget):
     async def load(self, file: Path):
         await self.update(markdown=file.read_text(encoding='utf-8'), src_dir=file.parent)
 
-    async def update(self, markdown: str, src_dir: Path = None):
-        self.DIR = src_dir or Path.cwd()
+    async def update(self, markdown: str, src_dir: t.Union[str, Path] = None):
+        self.DIR = Path(src_dir) or Path.cwd()
         parser = markdown_it.MarkdownIt(
             # config="commonmark",
             config="gfm-like",  # github-flavored-markdown
