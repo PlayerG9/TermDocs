@@ -27,6 +27,13 @@ class MarkdownHandler(BaseHandler):
     def on_custom_markdown_link_clicked(self, event: Markdown.LinkClicked):
         href = HyperRef(event.href)
         if href.check_is_file():
-            self.app.path = href.absolute(to=self.app.path).as_path()
+            path = href.absolute(to=self.app.path).as_path()
+            if path.is_dir():
+                for index in {'index.md', 'README.md', 'readme.md'}:
+                    file = path / index
+                    if file.is_file():
+                        path = file
+                        break
+            self.app.path = path
         else:
             logging.error(f"Can't handle link {href!r}")
