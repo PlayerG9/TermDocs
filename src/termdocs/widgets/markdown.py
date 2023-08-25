@@ -634,7 +634,6 @@ class CustomMarkdown(textual.widget.Widget):
         def control(self) -> 'CustomMarkdown':
             return self.root
 
-
     async def on_mount(self):
         if self.file:
             await self.load(self.file)
@@ -643,7 +642,7 @@ class CustomMarkdown(textual.widget.Widget):
         await self.update(markdown=file.read_text(encoding='utf-8'), src_dir=file.parent)
 
     async def update(self, markdown: str, src_dir: t.Union[str, Path] = None):
-        self.DIR = Path(src_dir) or Path.cwd()
+        self.DIR = Path(src_dir) if src_dir else Path.cwd()
         parser = markdown_it.MarkdownIt(
             # config="commonmark",
             config="gfm-like",  # github-flavored-markdown
