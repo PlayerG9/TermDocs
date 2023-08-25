@@ -16,7 +16,7 @@ def measured_function(fn):
             start = time.time()
             result = await fn(*args, **kwargs)
             end = time.time() - start
-            logging.debug(f"Measured for {fn.__name__}: {round(end, 5)}s")
+            logging.debug(f"Measured performance for {fn.__qualname__}: {round(end, 5)}s")
             return result
     else:
         @functools.wraps(fn)
@@ -24,7 +24,7 @@ def measured_function(fn):
             start = time.time()
             result = fn(*args, **kwargs)
             end = time.time() - start
-            logging.debug(f"Measured for {fn.__name__}: {round(end, 5)}s")
+            logging.debug(f"Measured performance for {fn.__qualname__}: {end:.5}s")
             return result
 
     return wrapper

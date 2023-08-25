@@ -107,7 +107,6 @@ class TermDocs(textual.app.App):
             log.write(message, scroll_end=True)
 
     def compose(self) -> textual.app.ComposeResult:
-        logging.debug("compose")
         yield textual.widgets.Header(show_clock=True)
         yield LoggingConsole(classes="-hidden", wrap=False, highlight=True, markup=True)
         with textual.containers.Container():
