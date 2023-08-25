@@ -1,3 +1,9 @@
+---
+layout: default
+title: example
+parent: Markdown
+---
+
 # Textual Markdown Browser - Demo
 
 This Markdown file contains some examples of Markdown widgets.

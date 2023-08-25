@@ -1,3 +1,9 @@
+---
+layout: default
+title: commonmark
+parent: Markdown
+---
+
 Markdown: Syntax
 ================
 
