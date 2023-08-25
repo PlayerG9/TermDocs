@@ -3,7 +3,6 @@
 r"""
 
 """
-from __version__ import __version__
 import logging
 import pathlib
 import textual
@@ -19,6 +18,7 @@ from textual.logging import TextualHandler as TextualLoggingHandler
 from handlers.register import HANDLERS
 import configuration
 from util import Compatibility
+import widgets
 
 
 logging.basicConfig(
@@ -35,13 +35,6 @@ for handler in logging.getLogger().handlers:
     handler.addFilter(SpecialModuleLoggingFilter())
 
 
-class HelpPopup(textual.widgets.Static):
-    def compose(self) -> textual.app.ComposeResult:
-        yield textual.widgets.Static(f"TermDocs v{__version__} Help")
-        with textual.containers.Container():
-            yield textual.widgets.Static("Hello World")
-
-
 class LoggingConsole(textual.widgets.RichLog):
     pass
 
@@ -56,10 +49,11 @@ class TermDocs(textual.app.App):
         textual.app.Binding("ctrl+q", "quit", "Quit"),  # general unix-like (ctrl+c is also possible)
         textual.app.Binding("ctrl+x", "quit", "Quit", show=False),  # nano-like
         textual.app.Binding("f", "toggle_files", "Toggle Files"),
-        textual.app.Binding("h", "toggle_help", "Toggle Help"),
+        # textual.app.Binding("h", "toggle_help", "Toggle Help"),
         textual.app.Binding("ctrl+d", "toggle_dark", "Toggle Dark-Mode", show=False),
-        textual.app.Binding("f1", "toggle_console", "Debug", show=False, priority=False),
-        textual.app.Binding("f5", "screenshot", "Screenshot", show=False, priority=False),
+        textual.app.Binding("f1", "toggle_help", "Toggle Help", show=True, priority=True),
+        textual.app.Binding("f4", "toggle_console", "Debug", show=False, priority=True),
+        textual.app.Binding("f5", "screenshot", "Screenshot", show=False, priority=True),
     ]
 
     LOGGING_STACK = []
@@ -110,7 +104,7 @@ class TermDocs(textual.app.App):
         yield textual.widgets.Header(show_clock=True)
         yield LoggingConsole(classes="-hidden", wrap=False, highlight=True, markup=True)
         with textual.containers.Container():
-            yield HelpPopup(classes="-hidden")
+            yield widgets.HelpWidget(classes="-hidden")
             yield textual.widgets.DirectoryTree(configuration.root_dir, id="tree-view")
             yield textual.containers.VerticalScroll(id="file-view")
         yield textual.widgets.Footer()
@@ -125,8 +119,7 @@ class TermDocs(textual.app.App):
         self.path = event.path.absolute()
 
     async def action_toggle_help(self):
-        logging.debug("Toggle Help")
-        help_popup = self.query_one(HelpPopup)
+        help_popup = self.query_one(widgets.HelpWidget)
         self.set_focus(None)
         if help_popup.has_class("-hidden"):
             help_popup.remove_class("-hidden")
