@@ -18,7 +18,7 @@ from textual.reactive import reactive, var
 import textual.timer
 import cairosvg
 from PIL import Image
-from util.href import HyperRef, DATE_URL_RE
+from util.href import HyperRef, DATA_URL_RE
 from util.performance import measured_function
 
 
@@ -113,7 +113,7 @@ class ImageBase(textual.widget.Widget):
         self._src = src = str(src)
         logging.debug(f"Loading image: {src[-40:]}")
         self._message = "Loading..."
-        if HyperRef.check_is_url(src):
+        if HyperRef.check_is_http_url(src):
             await self.load_web_url(url=src)
         elif HyperRef.check_is_data(src):
             await self.load_data_url(url=src)
@@ -152,7 +152,7 @@ class ImageBase(textual.widget.Widget):
     @textual.work(exit_on_error=False, exclusive=True)
     async def _load_data_url(self, url: str):
         try:
-            match = DATE_URL_RE.match(url)
+            match = DATA_URL_RE.match(url)
             groups = match.groupdict()
             mimetype = groups.get("mimetype")
             encoding = groups.get("encoding")

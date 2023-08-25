@@ -4,6 +4,7 @@ r"""
 
 """
 import logging
+import webbrowser
 from pathlib import Path
 import textual.app
 import textual.widgets
@@ -35,5 +36,9 @@ class MarkdownHandler(BaseHandler):
                         path = file
                         break
             self.app.path = path
+        elif href.check_is_http_url():
+            logging.debug("Open url in browser")
+            if not webbrowser.open(url=str(href)):
+                logging.error(f"Can't open url {href!r}")
         else:
             logging.error(f"Can't handle link {href!r}")

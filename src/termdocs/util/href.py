@@ -9,8 +9,9 @@ from pathlib import Path
 import typing as t
 
 
-WEB_URL_RE = re.compile(r"^https?://")
-DATE_URL_RE = re.compile(r"^data:(?P<mimetype>[\w\-.]+/[\w\-.]+)(?:;(?P<encoding>\w+))?,(?P<data>.*)$")
+WEB_URL_RE = re.compile(r"^\w+://")
+WEB_HTTP_URL_RE = re.compile(r"^https?://")
+DATA_URL_RE = re.compile(r"^data:(?P<mimetype>[\w\-+.]+/[\w\-+.]+)(?:;(?P<encoding>\w+))?,(?P<data>.*)$")
 
 
 class HyperRef:
@@ -46,9 +47,13 @@ class HyperRef:
         href = self._href if isinstance(self, HyperRef) else str(self)
         return WEB_URL_RE.match(href) is not None
 
+    def check_is_http_url(self: t.Union['HyperRef', str, Path]) -> bool:
+        href = self._href if isinstance(self, HyperRef) else str(self)
+        return WEB_HTTP_URL_RE.match(href) is not None
+
     def check_is_data(self: t.Union['HyperRef', str, Path]) -> bool:
         href = self._href if isinstance(self, HyperRef) else str(self)
-        return DATE_URL_RE.match(href) is not None
+        return DATA_URL_RE.match(href) is not None
 
     def check_is_file(self: t.Union['HyperRef', str, Path]) -> bool:
         return not any((

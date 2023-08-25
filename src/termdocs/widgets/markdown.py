@@ -51,6 +51,7 @@ class MarkdownElement(textual.widget.Widget):
             except textual.app.NoMatches as exc:
                 logging.error(f"No Header with id {href!r}", exc_info=exc)
             else:
+                logging.debug(f"Scrolling to widget {href}")
                 self.scroll_to_center(widget=widget, animate=True)
         else:
             self.post_message(CustomMarkdown.LinkClicked(root=self.root, href=href))
@@ -333,8 +334,11 @@ class MarkdownImage(MarkdownElement):
 
     @functools.cached_property
     def href(self) -> str:
-        href = self.node.attrGet("src")
-        return str(HyperRef(href).absolute(to=self.root.DIR))
+        href = HyperRef(self.node.attrGet("src"))
+        if href.check_is_file():
+            return str(href.absolute(to=self.root.DIR))
+        else:
+            return str(href)
 
     def compose(self) -> textual.app.ComposeResult:
         yield textual.containers.Container()
