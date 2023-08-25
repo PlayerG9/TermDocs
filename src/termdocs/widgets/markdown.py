@@ -312,15 +312,12 @@ class MarkdownImage(MarkdownElement):
     }
     """
 
-    detailed: bool = textual.reactive.reactive(False)
+    _detailed: bool = None
 
     @functools.cached_property
     def href(self) -> str:
         href = self.node.attrGet("src")
         return str(HyperRef(href).absolute(to=self.root.DIR))
-
-    async def watch_detailed(self):
-        await self.update_color_widget()
 
     def compose(self) -> textual.app.ComposeResult:
         yield textual.containers.Container()
@@ -332,17 +329,23 @@ class MarkdownImage(MarkdownElement):
             await container.mount(widget)
 
     async def on_mount(self):
-        await self.update_color_widget()
+        # this ensures that the markdown-content is loaded and rendered before the images are
+        # because images are "expensive" to load and render
+        self.set_timer(0.1, self.update_color_widget)
+        # await self.update_color_widget()
 
-    async def update_color_widget(self):
+    async def update_color_widget(self, detailed: bool = False):
+        if detailed == self._detailed:
+            return
+        self._detailed = detailed
         await self._set_image_widget(
-            (DetailImage if self.detailed else ColorImage)(src=self.href, delayed=True)
+            (DetailImage if detailed else ColorImage)(src=self.href)
         )
 
     async def on_click(self, event: textual.events.Click):
         if event.button in {2, 3}:  # middle- or right-click
             event.stop()
-            self.detailed = not self.detailed
+            await self.update_color_widget(not self._detailed)
 
 
 class MarkdownBlockQuote(MarkdownElement):

@@ -19,6 +19,7 @@ import textual.timer
 import cairosvg
 from PIL import Image
 from util.href import HyperRef, DATE_URL_RE
+from util.performance import measured_function
 
 
 WEB_IMAGE_MAX_SIZE = 1024*1024*10  # ~10MB
@@ -94,22 +95,16 @@ class ImageBase(textual.widget.Widget):
     def __init__(
             self,
             src: t.Union[str, Path, None] = None,
-            delayed: bool = False,
             *,
             id: t.Optional[str] = None,
             classes: t.Optional[str] = None,
     ):
         super().__init__(id=id, classes=classes)
         self._src = str(src) if isinstance(src, Path) else src
-        self._delayed = delayed
 
     async def on_mount(self):
         if self._src is not None:
-            if self._delayed:
-                self._message = "Loading..."
-                self.set_timer(0.2, lambda: self.load(self._src))
-            else:
-                await self.load(self._src)
+            await self.load(self._src)
 
     def request_refresh(self):
         self.refresh()
@@ -188,6 +183,7 @@ class ImageBase(textual.widget.Widget):
             self._message = f"{type(error).__name__}: {error}"
 
     @staticmethod
+    @measured_function
     def _convert_svg2png(buffer: t.BinaryIO) -> t.BinaryIO:
         out = io.BytesIO()
         cairosvg.svg2png(file_obj=buffer, write_to=out, output_height=500)
