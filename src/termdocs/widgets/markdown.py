@@ -20,6 +20,7 @@ import markdown_it.tree
 import markdown_it.token
 import markdownify
 from util import HyperRef
+from util.constants import SIZE2LANGUAGES
 from .color_image import ColorImage
 from .detail_image import DetailImage
 
@@ -431,8 +432,6 @@ class MarkdownCodeBlock(MarkdownElement):
     }
     """
 
-    SIZE2LANGUAGES = {'html', 'css', 'scss', 'sass', 'sql', 'yaml', 'json', 'xml'}
-
     def __init__(self, node: markdown_it.tree.SyntaxTreeNode, root: 'CustomMarkdown'):
         super().__init__(node=node, root=root)
         self._code = node.content
@@ -444,7 +443,7 @@ class MarkdownCodeBlock(MarkdownElement):
             dedent=True,
             line_numbers=self.node.type == "fence",
             # code_width=80,
-            tab_size=2 if self._language in self.SIZE2LANGUAGES else 4,
+            tab_size=2 if self._language in SIZE2LANGUAGES else 4,
             word_wrap=False,
             background_color=None,
             indent_guides=False,

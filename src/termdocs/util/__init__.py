@@ -5,3 +5,4 @@ r"""
 """
 from .enums import Compatibility
 from .href import HyperRef
+from .performance import measured_function
