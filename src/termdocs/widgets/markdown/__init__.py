@@ -22,8 +22,8 @@ import markdown_it.token
 import markdownify
 from util import HyperRef
 from util.constants import SIZE2LANGUAGES
-from .color_image import ColorImage
-from .detail_image import DetailImage
+from ..color_image import ColorImage
+from ..detail_image import DetailImage
 
 
 BULLETS = ["\u25CF ", "▪ ", "‣ ", "• ", "⭑ "]
