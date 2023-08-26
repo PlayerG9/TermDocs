@@ -24,10 +24,19 @@ from util import HyperRef
 from util.constants import SIZE2LANGUAGES
 from ..color_image import ColorImage
 from ..detail_image import DetailImage
+from .plugins import front_matter_plugin, emoji_plugin
+from ._emojis import EMOJIS as EMOJI_MAPPING
 
 
 BULLETS = ["\u25CF ", "▪ ", "‣ ", "• ", "⭑ "]
 NUMERALS = " ⅠⅡⅢⅣⅤⅥ"
+
+markdown_parser = markdown_it.MarkdownIt(
+    # config="commonmark",
+    config="gfm-like",  # github-flavored-markdown
+)
+markdown_parser.use(front_matter_plugin)
+markdown_parser.use(emoji_plugin)
 
 
 class MarkdownElement(textual.widget.Widget):
@@ -125,6 +134,9 @@ class MarkdownInline(MarkdownElement):
                     node=node,
                     style=style + self.get_component_rich_style(node.type, partial=True)
                 )
+            elif node.type == "emoji":
+                emoji = EMOJI_MAPPING.get(node.content) or f":{node.content}:"
+                yield Text(text=emoji, style=style)
             else:
                 logging.warning(f"Unknown node-type: {node.type}")
                 logging.debug(f"{vars(node)}")
@@ -268,6 +280,9 @@ class MarkdownHeading(MarkdownElement):
                         style=style + self.get_component_rich_style(node.type, partial=True)
                     )
                 )
+            elif node.type == "emoji":
+                emoji = EMOJI_MAPPING.get(node.content) or f":{node.content}:"
+                text.append(text=emoji, style=style)
             else:
                 logging.warning(f"Unknown node-type: {node.type}")
                 logging.debug(f"{vars(node)}")
@@ -571,13 +586,20 @@ class MarkdownHtmlBlock(MarkdownElement):
 
     def compose(self) -> ComposeResult:
         markdown = markdownify.markdownify(html=self.node.content)
-        parser = markdown_it.MarkdownIt(
-            # config="commonmark",
-            config="gfm-like",  # github-flavored-markdown
-        )
-        tokens = parser.parse(src=markdown)
+        tokens = markdown_parser.parse(src=markdown)
         node = markdown_it.tree.SyntaxTreeNode(tokens=tokens)
         yield from render_node(node=node, root=self.root)
+
+
+class MarkdownFrontMatter(MarkdownElement):
+    DEFAULT_CSS = r"""
+    MarkdownFrontMatter {
+        color: $text-muted;
+    }
+    """
+
+    def render(self) -> textual.app.RenderableType:
+        return self.node.content
 
 
 class UnknownElement(MarkdownElement):
@@ -598,12 +620,15 @@ HTML_MAP = dict(
     list_item=MarkdownListItem,
     blockquote=MarkdownBlockQuote,
     html_block=MarkdownHtmlBlock,
+    # gfm-like
     table=MarkdownTable,
     thead=MarkdownTableHead,
     tbody=MarkdownTableBody,
     tr=MarkdownTr,
     th=MarkdownTh,
     td=MarkdownTd,
+    # plugins
+    front_matter=MarkdownFrontMatter,
 )
 
 
@@ -647,12 +672,8 @@ class CustomMarkdown(textual.widget.Widget):
 
     async def update(self, markdown: str, src_dir: t.Union[str, Path] = None):
         self.DIR = Path(src_dir) if src_dir else Path.cwd()
-        parser = markdown_it.MarkdownIt(
-            # config="commonmark",
-            config="gfm-like",  # github-flavored-markdown
-        )
 
-        tokens = parser.parse(markdown)
+        tokens = markdown_parser.parse(markdown)
         root_node = markdown_it.tree.SyntaxTreeNode(tokens, create_root=True)
 
         widgets = render_node(node=root_node, root=self)

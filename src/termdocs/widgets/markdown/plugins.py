@@ -15,14 +15,14 @@ def emoji_plugin(md: MarkdownIt):
     )
 
 
-def _emoji_rule(state: StateInline):
+def _emoji_rule(state: StateInline, silent: bool):
     if state.src[state.pos] != ":":
         return False
-    pos = state.pos
+    pos = state.pos + 1
     emoji_chars = []
     while pos < state.posMax:
-        pos += 1
         char = state.src[pos]
+        pos += 1
         if char.isalnum():  # maybe change test
             emoji_chars.append(char)
         elif char == ":":
@@ -32,7 +32,7 @@ def _emoji_rule(state: StateInline):
     else:
         return False
     emoji_name = ''.join(emoji_chars)
-    state.pos += len(emoji_name) + 1
+    state.pos += len(emoji_name) + 2
     token = state.push(ttype="emoji", tag="", nesting=0)
     token.content = emoji_name
     # token.attrSet('emoji_name', emoji_name)
