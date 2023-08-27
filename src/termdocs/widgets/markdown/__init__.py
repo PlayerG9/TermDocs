@@ -24,7 +24,7 @@ from util import HyperRef
 from util.constants import SIZE2LANGUAGES
 from ..color_image import ColorImage
 from ..detail_image import DetailImage
-from .plugins import front_matter_plugin, emoji_plugin, attrs_plugin, attrs_block_plugin
+from . import plugins as markdown_plugins
 from ._emojis import EMOJIS as EMOJI_MAPPING
 
 
@@ -35,10 +35,11 @@ markdown_parser = markdown_it.MarkdownIt(
     # config="commonmark",
     config="gfm-like",  # github-flavored-markdown
 )
-markdown_parser.use(front_matter_plugin)
-markdown_parser.use(emoji_plugin)
-markdown_parser.use(attrs_plugin)
-markdown_parser.use(attrs_block_plugin)
+markdown_parser.use(markdown_plugins.front_matter_plugin)
+markdown_parser.use(markdown_plugins.emoji_plugin)
+markdown_parser.use(markdown_plugins.toc_plugin)
+markdown_parser.use(markdown_plugins.attrs_plugin)
+markdown_parser.use(markdown_plugins.attrs_block_plugin)
 
 
 class MarkdownElement(textual.widget.Widget):
@@ -243,6 +244,7 @@ class MarkdownHeading(MarkdownElement):
         color: $text;
         border-bottom: wide $foreground;
         width: auto;
+        padding-top: 1
     }
     .h4 {
         text-style: underline;
@@ -518,7 +520,7 @@ class MarkdownCodeBlock(MarkdownElement):
 
     def __init__(self, node: markdown_it.tree.SyntaxTreeNode, root: 'CustomMarkdown'):
         super().__init__(node=node, root=root)
-        self._code = node.content
+        self._code = node.content.strip()
         self._language = node.info
         self._renderable = rich.syntax.Syntax(
             code=self._code,
@@ -651,6 +653,43 @@ class MarkdownFrontMatter(MarkdownElement):
         return self.node.content
 
 
+class MarkdownToc(MarkdownElement):
+    DEFAULT_CSS = r"""
+    MarkdownToc {
+        padding: 1;
+    }
+    """
+
+    @functools.cached_property
+    def headings(self) -> t.Iterable[t.Tuple[int, MarkdownHeading]]:
+        max_depth = self.node.attrGet("depth")
+        max_depth = int(max_depth) if max_depth and max_depth.isdigit() else 3
+        for widget in self.root.walk_children(MarkdownHeading, method='depth'):
+            level = len(widget.node.markup)
+            if level > max_depth:
+                continue
+            yield level, widget
+
+    @functools.cached_property
+    def _rendered(self) -> Text:
+        text = Text()
+        text.append(
+            text="📖 Table of Contents\n",
+            style=Style(bold=True, italic=True)
+        )
+        for level, heading in self.headings:
+            text.append(text=f"{'  ' * level}\u25CF ")
+            text.append(
+                text=heading.id.replace('-', ' ').title(),
+                style=Style.from_meta({'@click': f"link({('#'+heading.id)!r})"})
+            )
+            text.append(text='\n')
+        return text
+
+    def render(self) -> textual.app.RenderableType:
+        return self._rendered
+
+
 class UnknownElement(MarkdownElement):
     def render(self) -> textual.app.RenderableType:
         return Text(f"{self.node}", style=Style.parse("on red"))
@@ -678,6 +717,7 @@ HTML_MAP = dict(
     td=MarkdownTd,
     # plugins
     front_matter=MarkdownFrontMatter,
+    toc=MarkdownToc,
 )
 
 
@@ -697,6 +737,8 @@ class CustomMarkdown(textual.widget.Widget):
     """
 
     DIR = Path.cwd()
+    TOKENS: t.List[markdown_it.token.Token] = None
+    ROOT_NODE: markdown_it.tree.SyntaxTreeNode = None
 
     def __init__(self, file: Path = None):
         super().__init__()
@@ -722,8 +764,8 @@ class CustomMarkdown(textual.widget.Widget):
     async def update(self, markdown: str, src_dir: t.Union[str, Path] = None):
         self.DIR = Path(src_dir) if src_dir else Path.cwd()
 
-        tokens = markdown_parser.parse(markdown)
-        root_node = markdown_it.tree.SyntaxTreeNode(tokens, create_root=True)
+        self.TOKENS = tokens = markdown_parser.parse(markdown)
+        self.ROOT_NODE = root_node = markdown_it.tree.SyntaxTreeNode(tokens, create_root=True)
 
         widgets = render_node(node=root_node, root=self)
 
