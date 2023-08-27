@@ -47,8 +47,6 @@ attr_parse = mdit_py_plugins.attrs.parse
 
 
 def new_handle_start(char: str, pos: int, _: attr_parse.TokenState) -> attr_parse.State:
-    import logging
-    logging.debug(f"'{char}'|{pos}")
     if pos == 0 and char == "{":
         return attr_parse.State.START
     if pos == 1 and char == ":":

@@ -63,15 +63,55 @@ class MarkdownElement(textual.widget.Widget):
         """Called on link click."""
         logging.debug(f"action_link({href!r})")
         if HyperRef.check_is_idref(href):
-            try:
-                widget = self.app.query_one(href)
-            except textual.app.NoMatches as exc:
-                logging.error(f"No Header with id {href!r}", exc_info=exc)
-            else:
-                logging.debug(f"Scrolling to widget {href}")
-                self.scroll_to_center(widget=widget, animate=True)
+            self.scroll_to_header(href=href)
         else:
             self.post_message(CustomMarkdown.LinkClicked(root=self.root, href=href))
+
+    def scroll_to_header(self, href: str):
+        for id_, should_warn in self.iterate_possible_ids(href):
+            logging.debug(f"attempt: {id_!r}")
+            try:
+                widget = self.root.query_one(id_)
+            except textual.app.NoMatches:
+                continue
+            else:
+                if should_warn:
+                    self.notify(
+                        message=f"Header {href!r} not found and {id_!r} was used instead",
+                        severity='warning',
+                        timeout=5
+                    )
+                logging.debug(f"Scrolling to widget {href}")
+                self.scroll_to_center(widget=widget, animate=True)
+                break
+        else:
+            logging.error(f"Header {href!r} not found in the document")
+            self.notify(
+                message=f"Header {href!r} or similar not found in this document",
+                title="Header not found",
+                severity='error',
+                timeout=5,
+            )
+
+    def iterate_possible_ids(self, id_: str):
+        yield id_, False
+        high_similar = self.get_closest_id(id_, cutoff=0.8)
+        if high_similar:
+            yield high_similar, False
+        low_similar = self.get_closest_id(id_, cutoff=0.4)
+        if low_similar:
+            yield low_similar, True
+
+    @property
+    def all_ids(self) -> t.List[str]:
+        return [
+            f"#{widget.id}" for widget in self.root.query(None) if widget.id
+        ]
+
+    def get_closest_id(self, id_: str, cutoff=0.6) -> t.Optional[str]:
+        import difflib
+        matches = difflib.get_close_matches(id_, self.all_ids, n=1, cutoff=cutoff)
+        return matches[0] if matches else None
 
 
 class MarkdownStatic(MarkdownElement):

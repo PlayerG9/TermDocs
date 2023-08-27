@@ -41,5 +41,17 @@ class MarkdownHandler(BaseHandler):
             logging.debug("Open url in browser")
             if not webbrowser.open(url=str(href)):
                 logging.error(f"Can't open url {href!r}")
+                self.notify(
+                    message=f"{href}",
+                    title="Can't open url",
+                    severity='error',
+                    timeout=10,
+                )
         else:
             logging.error(f"Can't handle link {href!r}")
+            self.notify(
+                message=f"TermDocs doesn't know how to handle this type of link:\n{href}",
+                title="Unknown link",
+                severity='error',
+                timeout=10,
+            )
