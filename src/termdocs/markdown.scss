@@ -1,0 +1,135 @@
+/* this document gets compiled with https://www.sassmeister.com/ */
+
+/* background colors */
+
+.warning, .bg-warning {
+    background: #{'$'}warning-darken-2;
+}
+
+.error, .bg-error {
+    background: #{'$'}error-darken-1;
+}
+
+.success, .bg-success {
+    background: #{'$'}success-darken-2;
+}
+
+.accent, .bg-accent {
+    background: #{'$'}accent-darken-1;
+}
+
+/* text styles */
+
+.italic, .i {
+    text-style: italic;
+}
+.bold, .b, .em {
+    text-style: bold;
+}
+.underline {
+    text-style: underline;
+}
+.strikethrough, .strike {
+    text-style: strike;
+}
+.muted {
+    color: #{'$'}text-muted;
+}
+
+/* text alignment */
+
+.left, .text-left {
+    text-align: left;
+}
+.center, .text-center {
+    text-align: center;
+}
+.right, .text-right {
+    text-align: right;
+}
+.justify, .text-justify, .justified, .text-justified {
+    text-align: justify;
+}
+
+
+// sizing
+$sizes: 0, 1, 2, 5, 10;
+/* sizing for #{$sizes}*/
+
+
+@each $i in $sizes {
+    .h-#{$i} {
+        height: $i;
+    }
+    .w-#{$i} {
+        width: $i;
+    }
+}
+
+// opacity
+$sizes: 0, 10, 20, 25, 30, 40, 50, 60, 70, 75, 80, 90, 100;
+/* opacity for #{$sizes}*/
+
+
+@each $i in $sizes {
+    .opacity-#{$i} {
+        opacity: #{$i+'%'};
+    }
+}
+
+
+// positioning
+$sizes: 0, 1, 2, 5, 10;
+/* positioning for #{$sizes} */
+
+@each $i in $sizes {
+    /* padding with #{$i} */
+    .p-#{$i} {
+        padding: $i;
+    }
+    .pl-#{$i} {
+        padding-top: $i;
+    }
+    .pr-#{$i} {
+        padding-right: $i;
+    }
+    .pt-#{$i} {
+        padding-bottom: $i;
+    }
+    .pb-#{$i} {
+        padding-left: $i;
+    }
+    .px-#{$i} {
+        padding-right: $i;
+        padding-left: $i;
+    }
+    .py-#{$i} {
+        padding-top: $i;
+        padding-bottom: $i;
+    }
+
+    /* margin with #{$i} */
+    .m-#{$i} {
+        margin: $i;
+    }
+    .ml-#{$i} {
+        margin-top: $i;
+    }
+    .mr-#{$i} {
+        margin-right: $i;
+    }
+    .mt-#{$i} {
+        margin-bottom: $i;
+    }
+    .mb-#{$i} {
+        margin-left: $i;
+    }
+    .mx-#{$i} {
+        margin-right: $i;
+        margin-left: $i;
+    }
+    .my-#{$i} {
+        margin-top: $i;
+        margin-bottom: $i;
+    }
+}

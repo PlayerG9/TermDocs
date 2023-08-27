@@ -35,12 +35,15 @@ for handler in logging.getLogger().handlers:
     handler.addFilter(SpecialModuleLoggingFilter())
 
 
+CSS_PATHS = ["style.css", *configuration.args.css]
+
+
 class LoggingConsole(textual.widgets.RichLog):
     pass
 
 
 class TermDocs(textual.app.App):
-    CSS_PATH = "style.css"
+    CSS_PATH = CSS_PATHS
 
     TITLE = "TermDocs"
     SUB_TITLE = str(configuration.index_file)

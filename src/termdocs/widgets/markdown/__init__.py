@@ -24,7 +24,7 @@ from util import HyperRef
 from util.constants import SIZE2LANGUAGES
 from ..color_image import ColorImage
 from ..detail_image import DetailImage
-from .plugins import front_matter_plugin, emoji_plugin
+from .plugins import front_matter_plugin, emoji_plugin, attrs_plugin, attrs_block_plugin
 from ._emojis import EMOJIS as EMOJI_MAPPING
 
 
@@ -37,6 +37,8 @@ markdown_parser = markdown_it.MarkdownIt(
 )
 markdown_parser.use(front_matter_plugin)
 markdown_parser.use(emoji_plugin)
+markdown_parser.use(attrs_plugin)
+markdown_parser.use(attrs_block_plugin)
 
 
 class MarkdownElement(textual.widget.Widget):
@@ -50,6 +52,12 @@ class MarkdownElement(textual.widget.Widget):
         self.node = node
         self.root = root
         super().__init__()
+        attr_id = node.attrGet("id")
+        if attr_id:
+            self.id = attr_id
+        classes = node.attrGet('class')
+        if classes:
+            self.add_class(*classes.split())
 
     async def action_link(self, href: str) -> None:
         """Called on link click."""
@@ -229,7 +237,8 @@ class MarkdownHeading(MarkdownElement):
 
     def __init__(self, node: markdown_it.tree.SyntaxTreeNode, root: 'CustomMarkdown'):
         super().__init__(node=node, root=root)
-        self.id = self._generate_id()
+        if self.id is None:
+            self.id = self._generate_id()
         logging.info(f"Header with id='{self.id}'")
         self.add_class(self.node.tag)
 

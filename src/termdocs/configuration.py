@@ -3,13 +3,18 @@
 r"""
 interactive terminal markdown-documentation viewer with support for images and with code-highlighting.
 """
+import typing as _t
 import argparse as __argparse
 from pathlib import Path as __Path
 from __version__ import __version__
 
 
 class __Namespace:
+    css: _t.List[str]
     docs: str
+
+    def __repr__(self):
+        return f"<{vars(self)}>"
 
 
 __parser = __argparse.ArgumentParser(
@@ -17,6 +22,11 @@ __parser = __argparse.ArgumentParser(
     description=__doc__,
     formatter_class=__argparse.ArgumentDefaultsHelpFormatter
 )
+__parser.add_argument('--css', '--tcss', action="append", type=str, default=[],
+                      help="additional tcss (textual-css) files to load")
+__parser.add_argument('--md-css', '--md-style', dest="css", action="append_const", const="markdown.css",
+                      help="load default css classes for the markdown\n"
+                           "(increases load time significantly)")
 __parser.add_argument('docs', nargs='?', default='.',
                       help="folder or file to view")
 __parser.add_argument('-v', '--version', action='version', version=__version__)
