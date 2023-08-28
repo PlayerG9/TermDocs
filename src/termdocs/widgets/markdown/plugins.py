@@ -3,6 +3,7 @@
 r"""
 
 """
+import re
 from markdown_it import MarkdownIt
 from markdown_it.rules_block import StateBlock
 from markdown_it.rules_inline import StateInline
@@ -47,45 +48,50 @@ def _emoji_rule(state: StateInline, silent: bool):
 
 def toc_plugin(md: MarkdownIt):
     md.block.ruler.before(
-        beforeName="paragraph",
+        beforeName="list",
         ruleName="toc",
         fn=_toc_rule,
     )
 
 
-def _toc_rule(state: StateBlock, startLine: int, endLine: int, silent: bool):
-    pos = state.bMarks[startLine] + state.tShift[startLine]
-    maximum = state.eMarks[startLine]
-    content = state.src[pos:maximum]
+__COMPLEX_TOC_RE = re.compile(r"(?P<style>[-*]|\d+\.) .+\n\{:toc}", re.IGNORECASE)
 
-    if content not in {'[[TOC]]', '{:TOC}'}:
+
+def _toc_rule(state: StateBlock, startLine: int, endLine: int, silent: bool):
+    # no whitespace offset on the first line
+    if state.tShift[startLine] != 0:
         return False
 
-    state.line = startLine + 1
+    pos = state.bMarks[startLine]
+    end = state.eMarks[startLine]
+    content = state.src[pos:end]
 
-    token = state.push(ttype="toc", tag="", nesting=0)
-    token.map = [startLine, state.line]
-    token.markup = content[:2]
+    if content.startswith('[[TOC]]'):
+        state.line = startLine + 1
+        token = state.push(ttype="toc", tag="", nesting=0)
+        token.map = [startLine, state.line]
+        token.attrs["style"] = "-"
+        token.markup = '[['
+        return True
 
-    return True
+    # also no whitespace offset on the second line
+    if state.tShift[startLine+1] != 0:
+        return False
 
+    pos = state.bMarks[startLine]
+    maximum = state.eMarks[startLine+1]
+    content = state.src[pos:maximum]
+    match = __COMPLEX_TOC_RE.fullmatch(content)
 
-# def toc_plugin(md: MarkdownIt):
-#     md.inline.ruler.push(
-#         ruleName="toc",
-#         fn=_toc_rule,
-#     )
-#
-#
-# def _toc_rule(state: StateInline, silent: bool):
-#     if state.src not in {'[[TOC]]', '{:TOC}'}:
-#         return False
-#
-#     state.pos += len(state.src)
-#     token = state.push(ttype="toc", tag="", nesting=0)
-#     token.markup = state.src[:2]
-#
-#     return True
+    if match is not None:
+        state.line = startLine + 2
+        token = state.push(ttype="toc", tag="", nesting=0)
+        token.map = [startLine, state.line]
+        token.attrs["style"] = match.group('style')
+        token.markup = '{:'
+        return True
+
+    return False
 
 
 attr_parse = mdit_py_plugins.attrs.parse

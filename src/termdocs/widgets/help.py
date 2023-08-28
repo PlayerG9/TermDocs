@@ -92,6 +92,10 @@ Or inline `inline attributes`{{: .italic }}
 
     [[TOC]]
     
+    - TOC
+    {{:toc}}
+    
+    1. TOC
     {{:toc}}
 
 ### Footnotes

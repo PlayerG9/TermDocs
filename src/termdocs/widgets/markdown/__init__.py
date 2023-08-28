@@ -689,19 +689,37 @@ class MarkdownToc(MarkdownElement):
         max_depth = int(max_depth) if max_depth and max_depth.isdigit() else 3
         for widget in self.root.walk_children(MarkdownHeading, method='depth'):
             level = len(widget.node.markup)
-            if level > max_depth:
+            if level > max_depth or widget.has_class("no_toc"):
                 continue
             yield level, widget
 
+    @staticmethod
+    def _bullet_list_icon(_) -> str:
+        return "\u25CF"
+
+    @staticmethod
+    def _number_list_icon(i: int) -> str:
+        return f"{i}."
+
     @functools.cached_property
     def _rendered(self) -> Text:
+        dot_style = self.node.attrGet('style') in {'-', '*', 'list', 'ul'}
+        get_icon = self._bullet_list_icon if dot_style else self._number_list_icon
+
         text = Text()
         text.append(
             text="📖 Table of Contents\n",
             style=Style(bold=True, italic=True)
         )
+        stack = []
         for level, heading in self.headings:
-            text.append(text=f"{'  ' * level}\u25CF ")
+            while level > len(stack):
+                stack.append(0)
+            while level < len(stack):
+                stack.pop(-1)
+            stack[-1] += 1
+
+            text.append(text=f"{'  ' * level}{get_icon(stack[-1])} ")
             text.append(
                 text=heading.id.replace('-', ' ').title(),
                 style=Style.from_meta({'@click': f"link({('#'+heading.id)!r})"})
@@ -834,7 +852,7 @@ class CustomMarkdown(textual.widget.Widget):
 
     async def update(self, markdown: str, src_dir: t.Union[str, Path] = None):
         self.DOCUMENT_ID = random.randbytes(4).hex()
-        logging.debug(f"Loading Markdown-Document with id {self.DOCUMENT_ID!r}")
+        logging.debug(f"Loading Markdown-Document with generated id {self.DOCUMENT_ID!r}")
         self.DIR = Path(src_dir) if src_dir else Path.cwd()
 
         self.TOKENS = tokens = markdown_parser.parse(markdown)
