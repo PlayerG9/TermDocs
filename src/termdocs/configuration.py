@@ -25,7 +25,8 @@ __parser = __argparse.ArgumentParser(
 __parser.add_argument('--css', '--tcss', action="append", type=str, default=[],
                       help="additional tcss (textual-css) files to load")
 __parser.add_argument('--md-css', '--md-style', dest="css", action="append_const", const="markdown.css",
-                      help="load default css classes for the markdown\n"
+                      help="load default tailwind-like css classes for the markdown attributes\n"
+                           "(e.g. p-1, bg-warning, text-right)\n"
                            "(increases load time significantly)")
 __parser.add_argument('docs', nargs='?', default='.',
                       help="folder or file to view")

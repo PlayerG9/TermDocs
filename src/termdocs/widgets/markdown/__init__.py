@@ -4,6 +4,7 @@ r"""
 TODO: html_inline in text/header
 """
 import logging
+import random
 import functools
 import typing as t
 from pathlib import Path
@@ -40,6 +41,7 @@ markdown_parser.use(markdown_plugins.emoji_plugin)
 markdown_parser.use(markdown_plugins.toc_plugin)
 markdown_parser.use(markdown_plugins.attrs_plugin)
 markdown_parser.use(markdown_plugins.attrs_block_plugin)
+markdown_parser.use(markdown_plugins.footnote_plugin)
 
 
 class MarkdownElement(textual.widget.Widget):
@@ -70,7 +72,6 @@ class MarkdownElement(textual.widget.Widget):
 
     def scroll_to_header(self, href: str):
         for id_, should_warn in self.iterate_possible_ids(href):
-            logging.debug(f"attempt: {id_!r}")
             try:
                 widget = self.root.query_one(id_)
             except textual.app.NoMatches:
@@ -149,9 +150,12 @@ class MarkdownInline(MarkdownElement):
         text-style: bold dim;
         background: $background-lighten-2;
     }
+    .footnote {
+        text-style: italic dim;
+    }
     """
 
-    COMPONENT_CLASSES = {"em", "strong", "s", "code_inline"}
+    COMPONENT_CLASSES = {"em", "strong", "s", "code_inline", "footnote"}
 
     def _recursive_compose(self, node, style=None):
         style = style or Style()
@@ -186,12 +190,23 @@ class MarkdownInline(MarkdownElement):
             elif node.type == "emoji":
                 emoji = EMOJI_MAPPING.get(node.content) or f":{node.content}:"
                 yield Text(text=emoji, style=style)
+            elif node.type == "footnote_ref":
+                footnote_id = node.meta['id']
+                action = f"link({f'#footnote-{self.root.DOCUMENT_ID}-{footnote_id}'!r})"
+                yield Text(
+                    text=f"^{footnote_id}",
+                    style=style + self.get_component_rich_style("footnote") + Style.from_meta({"@click": action})
+                )
             else:
-                logging.warning(f"Unknown node-type: {node.type}")
+                logging.warning(f"Unknown inline node-type: {node.type}")
                 logging.debug(f"{vars(node)}")
 
     def _clean_compose(self, composed: iter):
         text = Text()
+        next_sibling = self.node.next_sibling
+        if next_sibling and next_sibling.type == "footnote_anchor":
+            text.append(text=f"^{next_sibling.meta['id']}: ", style=Style(dim=True, italic=True))
+
         for item in composed:
             if isinstance(item, Text):
                 text.append_text(item)
@@ -273,9 +288,12 @@ class MarkdownHeading(MarkdownElement):
         text-style: bold dim;
         background: $background-lighten-2;
     }
+    .footnote {
+        text-style: italic dim;
+    }
     """
 
-    COMPONENT_CLASSES = {"em", "strong", "s", "code_inline"}
+    COMPONENT_CLASSES = {"em", "strong", "s", "code_inline", "footnote"}
 
     def __init__(self, node: markdown_it.tree.SyntaxTreeNode, root: 'CustomMarkdown'):
         super().__init__(node=node, root=root)
@@ -315,7 +333,7 @@ class MarkdownHeading(MarkdownElement):
                 text.append(
                     self._render_inline(
                         node=node,
-                        style=style + Style.from_meta({"@click": action})
+                        style=style + self.get_component_rich_style("footnote") + Style.from_meta({"@click": action})
                     )
                 )
             elif node.type == "code_inline":
@@ -334,8 +352,15 @@ class MarkdownHeading(MarkdownElement):
             elif node.type == "emoji":
                 emoji = EMOJI_MAPPING.get(node.content) or f":{node.content}:"
                 text.append(text=emoji, style=style)
+            elif node.type == "footnote_ref":
+                footnote_id = node.meta['id']
+                action = f"link({f'#footnote-{self.root.DOCUMENT_ID}-{footnote_id}'!r})"
+                text.append(
+                    text=f"[^{footnote_id}]",
+                    style=style + Style.from_meta({"@click": action})
+                )
             else:
-                logging.warning(f"Unknown node-type: {node.type}")
+                logging.warning(f"Unknown inline node-type: {node.type}")
                 logging.debug(f"{vars(node)}")
         return text
 
@@ -527,7 +552,7 @@ class MarkdownCodeBlock(MarkdownElement):
             lexer=self._language,
             theme='ansi_dark',
             dedent=True,
-            line_numbers=self.node.type == "fence",
+            line_numbers=bool(self._language),
             # code_width=80,
             tab_size=2 if self._language in SIZE2LANGUAGES else 4,
             word_wrap=False,
@@ -544,7 +569,6 @@ class MarkdownTable(MarkdownElement):
     DEFAULT_CSS = r"""
     MarkdownTable {
         layout: vertical;
-        /*background: $primary-background-lighten-1;*/
         border: round $primary-background-lighten-2;
     }
     """
@@ -569,7 +593,6 @@ class MarkdownTableHead(MarkdownElement):
     DEFAULT_CSS = r"""
     MarkdownTableHead {
         layout: vertical;
-        /*border-bottom: solid $primary-background-lighten-2;*/
     }
     """
 
@@ -690,7 +713,51 @@ class MarkdownToc(MarkdownElement):
         return self._rendered
 
 
+class MarkdownFootnoteBlock(MarkdownElement):
+    DEFAULT_CSS = r"""
+    MarkdownFootnoteBlock {
+        layout: vertical;
+        color: $text-muted;
+        text-style: italic;
+    }
+    """
+
+    def compose(self) -> ComposeResult:
+        yield from render_node(node=self.node, root=self.root)
+
+
+class MarkdownFootnote(MarkdownElement):
+    DEFAULT_CSS = r"""
+    MarkdownFootnote {
+        layout: horizontal;
+    }
+    """
+
+    def on_mount(self):
+        logging.debug(f"Footnote: {vars(self.node)}")
+
+    def compose(self) -> ComposeResult:
+        yield from render_node(node=self.node, root=self.root)
+
+
+class MarkdownFootnoteAnchor(MarkdownFootnote):
+    DEFAULT_CSS = r"""
+    MarkdownFootnoteAnchor {
+        height: 0;
+    }
+    """
+
+    def __init__(self, node: markdown_it.tree.SyntaxTreeNode, root: 'CustomMarkdown'):
+        super().__init__(node=node, root=root)
+        footnote_id = self.node.meta['id']
+        self.id = f'footnote-{self.root.DOCUMENT_ID}-{footnote_id}'
+
+
 class UnknownElement(MarkdownElement):
+    def on_mount(self):
+        logging.warning(f"Unknown node-type: {self.node.type}")
+        logging.debug(f"{vars(self.node)}")
+
     def render(self) -> textual.app.RenderableType:
         return Text(f"{self.node}", style=Style.parse("on red"))
 
@@ -718,6 +785,9 @@ HTML_MAP = dict(
     # plugins
     front_matter=MarkdownFrontMatter,
     toc=MarkdownToc,
+    footnote_block=MarkdownFootnoteBlock,
+    footnote=MarkdownFootnote,
+    footnote_anchor=MarkdownFootnoteAnchor,
 )
 
 
@@ -739,6 +809,7 @@ class CustomMarkdown(textual.widget.Widget):
     DIR = Path.cwd()
     TOKENS: t.List[markdown_it.token.Token] = None
     ROOT_NODE: markdown_it.tree.SyntaxTreeNode = None
+    DOCUMENT_ID: str = random.randbytes(4).hex()
 
     def __init__(self, file: Path = None):
         super().__init__()
@@ -762,6 +833,8 @@ class CustomMarkdown(textual.widget.Widget):
         await self.update(markdown=file.read_text(encoding='utf-8'), src_dir=file.parent)
 
     async def update(self, markdown: str, src_dir: t.Union[str, Path] = None):
+        self.DOCUMENT_ID = random.randbytes(4).hex()
+        logging.debug(f"Loading Markdown-Document with id {self.DOCUMENT_ID!r}")
         self.DIR = Path(src_dir) if src_dir else Path.cwd()
 
         self.TOKENS = tokens = markdown_parser.parse(markdown)

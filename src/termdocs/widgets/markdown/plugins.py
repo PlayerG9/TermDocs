@@ -8,6 +8,7 @@ from markdown_it.rules_block import StateBlock
 from markdown_it.rules_inline import StateInline
 from mdit_py_plugins.front_matter import front_matter_plugin  # noqa
 from mdit_py_plugins.attrs import attrs_plugin, attrs_block_plugin  # noqa
+from mdit_py_plugins.footnote import footnote_plugin  # noqa
 import mdit_py_plugins.attrs.parse
 
 

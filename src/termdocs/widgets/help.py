@@ -5,11 +5,13 @@ r"""
 """
 from __version__ import __version__
 import logging
+import textwrap
 import webbrowser
 import textual.app
 import textual.widget
 from .markdown import CustomMarkdown as Markdown
 from util import HyperRef
+import configuration
 
 
 MESSAGE = f"""
@@ -23,6 +25,10 @@ MESSAGE = f"""
 ## About TermDocs
 
 TermDocs is an interactive terminal markdown-documentation viewer with support for all markdown features.
+
+## Starting Options
+
+{textwrap.indent(configuration.__parser.format_help(), prefix=' '*4)}
 
 ## Shortcuts
 
@@ -38,7 +44,7 @@ TermDocs is an interactive terminal markdown-documentation viewer with support f
 ## More
 
 - [GitHub Repository](https://github.com/PlayerG9/TermDocs)
-- [Online Documentation](https://PlayerG9.github.com/TermDocs/)
+- [Online Documentation](https://PlayerG9.github.io/TermDocs/)
 
 ## Markdown Specifications
 
@@ -88,6 +94,25 @@ Or inline `inline attributes`{{: .italic }}
     
     {{:toc}}
 
+### Footnotes
+
+Here is a footnote reference,[^1] and another.[^longnote]
+
+[^1]: Here is the footnote.
+
+[^longnote]: Here's one with multiple blocks.
+    Subsequent paragraphs are indented to show that they
+belong to the previous footnote.
+
+```
+Here is a footnote reference,[^1] and another.[^longnote]
+
+[^1]: Here is the footnote.
+
+[^longnote]: Here's one with multiple blocks.
+    Subsequent paragraphs are indented to show that they
+belong to the previous footnote.
+```
 
 """
 
@@ -101,12 +126,16 @@ class HelpWidget(textual.widget.Widget):
         background: $warning-darken-3;
     }
     """
+    _is_rendered: bool = False
 
     def compose(self) -> textual.app.ComposeResult:
         yield Markdown()
 
-    async def on_mount(self):
+    async def ensure_rendered(self):
+        if self._is_rendered:
+            return
         await self.query_one(Markdown).update(markdown=MESSAGE)
+        self._is_rendered = True
 
     @textual.on(Markdown.LinkClicked)
     async def on_link_clicked(self, event: Markdown.LinkClicked):

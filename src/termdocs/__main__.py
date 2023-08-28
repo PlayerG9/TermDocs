@@ -126,6 +126,7 @@ class TermDocs(textual.app.App):
         self.set_focus(None)
         if help_popup.has_class("-hidden"):
             help_popup.remove_class("-hidden")
+            await help_popup.ensure_rendered()
         else:
             if help_popup.query("*:focus"):
                 self.screen.set_focus(None)
