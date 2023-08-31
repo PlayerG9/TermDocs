@@ -15,8 +15,7 @@ import textual.reactive
 import textual.containers
 from textual.app import ComposeResult
 import rich.syntax
-from rich.text import Text
-from rich.style import Style
+from rich.text import Text, Style
 import markdown_it
 import markdown_it.tree
 import markdown_it.token
@@ -378,10 +377,10 @@ class MarkdownHeading(MarkdownElement):
         Valid Identifier: '[a-zA-Z_\-][a-zA-Z0-9_\-]*'
         """
         import re
-        plain = self._render_plaintext(node=self.node)
+        plain = self.rendered_plaintext
         plain = plain.strip().lower().replace(' ', '-')
-        head_match = re.match(r"[^a-zA-Z_\-]*([a-zA-Z_\-])", plain)
-        head = head_match.group(1)
+        head_match = re.match(r"[a-zA-Z_\-]", plain)
+        head = head_match.group()
         body_matches = re.finditer(r"[a-zA-Z0-9_\-]+", plain[head_match.end():])
         base_id = head + ''.join(_.group() for _ in body_matches)
         real_id = base_id
@@ -396,9 +395,16 @@ class MarkdownHeading(MarkdownElement):
                 real_id = f"{base_id}-{i}"
         return real_id
 
-    @functools.cache
-    def render(self) -> textual.app.RenderableType:
+    @functools.cached_property
+    def rendered_text(self) -> Text:
         return self._render_inline(self.node.children[0])
+
+    @functools.cached_property
+    def rendered_plaintext(self) -> str:
+        return self._render_plaintext(node=self.node)
+
+    def render(self) -> textual.app.RenderableType:
+        return self.rendered_text
 
 
 class MarkdownParagraph(MarkdownElement):
@@ -721,7 +727,7 @@ class MarkdownToc(MarkdownElement):
 
             text.append(text=f"{'  ' * level}{get_icon(stack[-1])} ")
             text.append(
-                text=heading.id.replace('-', ' ').title(),
+                text=heading.rendered_plaintext,
                 style=Style.from_meta({'@click': f"link({('#'+heading.id)!r})"})
             )
             text.append(text='\n')
@@ -758,6 +764,7 @@ class MarkdownFootnote(MarkdownElement):
         yield from render_node(node=self.node, root=self.root)
 
 
+# TODO: backref to place in document!?
 class MarkdownFootnoteAnchor(MarkdownFootnote):
     DEFAULT_CSS = r"""
     MarkdownFootnoteAnchor {
