@@ -4,14 +4,14 @@ r"""
 
 """
 import logging
+import typing as t
 import pathlib
 import textual
 import textual.app
-import textual.css.query
-import textual.containers
-import textual.reactive
-import textual.widgets
 import textual.color
+import textual.widgets
+import textual.reactive
+import textual.containers
 import rich.text
 from logging_handler import InternLoggingHandler, SpecialModuleLoggingFilter
 from textual.logging import TextualHandler as TextualLoggingHandler
@@ -63,13 +63,14 @@ class TermDocs(textual.app.App):
 
     path = textual.reactive.var(configuration.index_file)
     show_tree = textual.reactive.var(True)
+    _last_link: t.Optional[str] = None
 
     def watch_show_tree(self, show_tree: bool):
         self.set_class(show_tree, "-show-tree")
 
     async def watch_path(self):
         logging.debug(f"Selected File: {self.path}")
-        self.sub_title = self.validate_sub_title(self.path)  # noqa
+        self.sub_title = self.format_path(self.path)  # noqa
         container = self.query_one('#file-view', textual.containers.VerticalScroll)
         await container.remove_children()
         if not self.path:
@@ -96,7 +97,7 @@ class TermDocs(textual.app.App):
     def add_log(self, message: textual.app.RenderableType):
         try:
             log = self.query_one(LoggingConsole)
-        except textual.css.query.NoMatches:
+        except textual.app.NoMatches:
             self.LOGGING_STACK.append(message)
         else:
             while self.LOGGING_STACK:
@@ -145,12 +146,29 @@ class TermDocs(textual.app.App):
         await container.remove_children()
         await container.mount(TextHandler(path=self.path))
 
+    async def action_screenshot(self, filename: str = None, path: str = "./") -> None:
+        screenshot_path = self.save_screenshot(filename=filename, path=path)
+        self.notify(
+            message=str(screenshot_path),
+            title="Screenshot Taken",
+            timeout=5,
+        )
+
     @staticmethod
     def format_path(path: pathlib.Path) -> str:
         try:
             return str(path.relative_to(configuration.root_dir))
         except ValueError:
             return str(path)
+
+    # TODO: implement this
+    # def handle_open_link(self, url: str):
+    #     if self._last_link != url:
+    #         self._last_link = None
+    #         self.notify()  # click again
+    #         return
+    #     import webbrowser
+    #     webbrowser.open()
 
 
 if __name__ == '__main__':
