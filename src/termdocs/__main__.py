@@ -4,8 +4,9 @@ r"""
 
 """
 import logging
-import typing as t
 import pathlib
+import mimetypes
+import typing as t
 import textual
 import textual.app
 import textual.color
@@ -40,6 +41,26 @@ CSS_PATHS = ["style.css", *configuration.args.css]
 
 class LoggingConsole(textual.widgets.RichLog):
     pass
+
+
+class DirectoryTree(textual.widgets.DirectoryTree):
+    def filter_paths(self, paths: t.Iterable[pathlib.Path]) -> t.Iterable[pathlib.Path]:
+        if configuration.args.all:
+            return paths
+
+        def _filter(path: pathlib.Path):
+            if not (path.is_dir() or path.is_file()):
+                return False
+            if path.name.startswith(('.', '_')):
+                return False
+            if path.is_file():
+                mime, _ = mimetypes.guess_type(path)
+                if mime is None:
+                    return False
+                if mime != "text/markdown" and not mime.startswith("image/"):
+                    return False
+            return True
+        return filter(_filter, paths)
 
 
 class TermDocs(textual.app.App):
@@ -109,16 +130,16 @@ class TermDocs(textual.app.App):
         yield LoggingConsole(classes="-hidden", wrap=False, highlight=True, markup=True)
         with textual.containers.Container():
             yield widgets.HelpWidget(classes="-hidden")
-            yield textual.widgets.DirectoryTree(configuration.root_dir, id="tree-view")
+            yield DirectoryTree(configuration.root_dir, id="tree-view")
             yield textual.containers.VerticalScroll(id="file-view")
         yield textual.widgets.Footer()
 
     async def on_mount(self):
         logging.info("TermDocs is running")
-        self.query_one(textual.widgets.DirectoryTree).focus()
+        self.query_one(DirectoryTree).focus()
         self.show_tree = not configuration.is_custom_file
 
-    async def on_directory_tree_file_selected(self, event: textual.widgets.DirectoryTree.FileSelected):
+    async def on_directory_tree_file_selected(self, event: DirectoryTree.FileSelected):
         event.stop()
         self.path = event.path.absolute()
 

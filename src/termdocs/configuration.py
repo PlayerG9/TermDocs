@@ -10,6 +10,7 @@ from __version__ import __version__
 
 
 class __Namespace:
+    all: bool
     css: _t.List[str]
     docs: str
 
@@ -22,6 +23,8 @@ __parser = __argparse.ArgumentParser(
     description=__doc__,
     formatter_class=__argparse.ArgumentDefaultsHelpFormatter
 )
+__parser.add_argument('-a', '--all', type=bool, action=__argparse.BooleanOptionalAction,
+                      help="show all files in the filetree and not just .md files")
 __parser.add_argument('--css', '--tcss', action="append", type=str, default=[],
                       help="additional tcss (textual-css) files to load")
 __parser.add_argument('--md-css', '--md-style', dest="css", action="append_const", const="markdown.css",
